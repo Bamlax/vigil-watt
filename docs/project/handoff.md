@@ -6,7 +6,7 @@
 
 ## 1. 当前状态
 
-当前安装包 **1.2.1**（`dist/`，本机试装用；尚未上传正式 Release）。正式线上以 GitHub 最新 Release 为准，Gitee 是回退源；更新源 GitHub 优先、8 秒不通回退 Gitee。发新版时保留上一版 `*-full.nupkg` 作为 delta 基准；规则见 `dev/build.md` §8。
+当前安装包 **1.2.2**（`dist/`，本机试装用；尚未上传正式 Release）。正式线上以 GitHub 最新 Release 为准，Gitee 是回退源；更新源 GitHub 优先、8 秒不通回退 Gitee。发新版时保留上一版 `*-full.nupkg` 作为 delta 基准；规则见 `dev/build.md` §8。
 
 本机已打通：迈从 G87（0x13）、雷柏 VT3（status-report7，纯被动）、北通 T9（被动流）、经典蓝牙耳机（HFP 网关节点 `DEVPKEY_Device_BatteryLevel`）。罗技 Bolt 接收器（C548）+ MX Master 3S 已真机验证。本机电量可选，默认关。弱水时砂 2.4G 无电量通道，不再投入。
 
@@ -20,7 +20,7 @@
 
 审查标准在 `docs/dev/review-standard.md`，未修项全集在 `docs/reviews/BACKLOG.md`（不要在本文再抄一份）。
 
-社区分支 `integrate/community-contributions` 已收 6 个提交（HECATE → AULA/DELUX → DualSense → 迈从鼠标 V2 → GANSS → V9 Pro 耳机），比 `main` 多 6 个，**未推送**。设备接入到此为止；设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 都按 BACKLOG CR-68 ~ CR-72 排队，本轮不做。
+社区分支 `integrate/community-contributions` 已收 6 个提交（HECATE → AULA/DELUX → DualSense → 迈从鼠标 V2 → GANSS → V9 Pro 耳机），2026-10-19 以 `--no-ff` 合并进 `main`（合并提交 `90cf94b`），该分支按用户要求**留在本地，未推送也未删除**。设备接入到此为止；设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 都按 BACKLOG CR-68 ~ CR-72 排队，本轮不做。
 
 更新说明是用户向的 `docs/project/release-notes.md`，随包分发：关于页「更新日志」离线可看全部历史，更新确认框显示目标版本的内容（来自更新源 notes，缺失时只显示版本行）。规则见 `dev/build.md` §8。
 

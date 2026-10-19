@@ -8,6 +8,7 @@
 - **HECATE G5M Pro**：接入只读电量插件，认领限定 `35BB:D00B` 的厂商集合；拔出设备时把离线状态交回设备列表。帧样本来自贡献者，本机未复测。见 `hardware/protocols.md` §7。
 - **AULA F99 Pro / DELUX M900 Pro**：接入两个插件。AULA 会写会话帧，默认关，且不进 15 秒发现。DELUX 只读，但与英菲克同 VID/PID，本机没扫到接收器，也默认关。见 `hardware/protocols.md` §8、§9。
 - **DualSense**：接入蓝牙 HID 只读电量。只认 `054C:0CE6` 的 78 字节报告，CRC 失败丢弃。不拿同一 PR 里的 GANSS 和 V9 Pro。见 `hardware/dualsense.md`。
+- **迈从鼠标 V2 / G87 V2（#17）**：接入 E2 被动状态帧与 `0x11/0x06` 触发帧，认领加 `0x3837`/`0x41E4` 白名单并把 64 字节等值判据放宽到 ≥60（65 字节接口原先永远命不中）。新增 `ResolveKind` 让同一插件按协议区分键鼠图标。鼠标链路为本贡献者真机验证，本机只有 G87 V1，未复测。见 `hardware/protocols.md` §1.6。
 
 ## 2026-10-18
 

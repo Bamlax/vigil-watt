@@ -22,6 +22,7 @@
 | HECATE G5M Pro `report 0x04` | 贡献者 dotisland 对官方 HECATE Connect 与接收器 `35BB:D00B` 的被动抓包（PR #13）。 | 只读解析 report `0x04`，不发送命令。帧与充放电对照是贡献者声明，本机未复测。 | 未复用官方软件代码。见 [protocols.md](protocols.md) §7。 |
 | DELUX M900 Pro `0x000A` 状态帧 | 贡献者 Baron77777 对官方驱动与接收器 `1D57:FA65` 的被动抓包（PR #16）。 | 只读解析 5 字节状态帧。与英菲克同 VID/PID，本机这次没有扫到该接收器，插件默认关。 | 未复用官方软件代码。见 [protocols.md](protocols.md) §8。 |
 | AULA F99 Pro `0x13` 会话/推送 | 贡献者 Baron77777 对 `3554:FA09` 实发会话帧并收到推送（PR #16）。 | 复用 `MchoseV1Codec`，只发 `13 05 01`；不发无应答的 `13 4A`，不进 15 秒发现。默认关。 | 未抓 AULA 官方驱动，未复用外部代码。见 [protocols.md](protocols.md) §9。 |
+| DualSense 蓝牙 `0x31` | Linux `hid-playstation` 的帧格式与 CRC；贡献者 luze258 的蓝牙样本（PR #15）。 | 只读 78 字节输入报告，不发送命令。电量是约 10% 档位。贡献者声明只实测过一个放电档，本机未复测。 | 未复制 Linux 驱动代码。见 [dualsense.md](dualsense.md)。 |
 | 弱水时砂炽天使 2.4G | 官方 RoseLink（Flutter + BLE 自定义协议）及官方升级助手逆向；同时检查 2.4G dongle 的 HID 通道。 | 用于确认 RoseLink 电量协议不含电量命令、正常 2.4G 模式无可用电量通道；本项目不接入该设备电量。 | 逆向结论用于能力边界判断，不包含外部代码复用。见 [protocols.md](protocols.md)。 |
 | Classic Bluetooth 耳机电量 | Windows HFP 网关设备节点的 `DEVPKEY_Device_BatteryLevel` 属性；与 Windows 设置显示同源。 | 通过 PnP 设备节点读取；本机 EDIFIER W820NB 已验证。 | Windows 系统属性读取方案；不是 BLE AEP 属性。实现背景见 [runtime-pitfalls.md](../dev/runtime-pitfalls.md)。 |
 

@@ -35,6 +35,7 @@
 | HECATE G5M Pro（VID_35BB&PID_D00B） | report 0x04 被动状态帧 | 代码已接入，默认开、零写入。帧与充放电是贡献者声明，本机未复测（protocols.md §7） |
 | AULA F99 Pro（VID_3554&PID_FA09） | `0x13` 会话后读推送 | 代码已接入，默认关。不进 15 秒发现。贡献者声明，本机未复测（protocols.md §9） |
 | DELUX M900 Pro（VID_1D57&PID_FA65） | `0x000A` 被动 5 字节帧 | 代码已接入，默认关。与英菲克同 VID/PID；2026-10-19 本机没扫到 `1D57`（protocols.md §8） |
+| DualSense（VID_054C&PID_0CE6） | 蓝牙 HID report `0x31` | 代码已接入，默认开、零写入。约 10% 一档。贡献者声明，本机未复测（dualsense.md） |
 | 北通 T9（PID_5073）/ 鲲鹏20（PID_5191） | 厂商接口 0xFF00；T9 走 Col04 被动流 | T9 已真机验证；鲲鹏20 主动查询未验证 |
 | 弱水时砂 2.4G（38FF:0001） | — | 无电量通道（protocols.md §3），不再投入 |
 | EDIFIER W820NB | HFP 网关 `DEVPKEY_Device_BatteryLevel` | 已打通，与设置页一致 |

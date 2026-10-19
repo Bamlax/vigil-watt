@@ -33,7 +33,8 @@ VigilWatt.sln
 │   │   ├── Inphic/                    # 英菲克 report 0x03 被动状态帧
 │   │   ├── Hecate/                    # HECATE report 0x04 被动状态帧
 │   │   ├── Delux/                     # DELUX 0x000A 被动状态帧
-│   │   └── Aula/                      # AULA F99 Pro：复用 0x13 会话帧，默认关
+│   │   ├── Aula/                      # AULA F99 Pro：复用 0x13 会话帧，默认关
+│   │   └── Sony/                      # DualSense 蓝牙 HID 只读电量
 │   ├── Models/DeviceStatus            # 统一设备状态快照（Id/电量/充电/在线）
 │   ├── Settings/AppSettings           # settings.json 读写
 │   ├── Storage/HistoryStore           # SQLite（Microsoft.Data.Sqlite）：写入/查询/按设备删除/VACUUM

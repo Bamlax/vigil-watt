@@ -67,6 +67,7 @@
 | HECATE G5M Pro · 被动 report `0x04` | 已实现；贡献者真机，维护者未复测 |
 | AULA F99 Pro · `0x13` 会话/推送 | 已实现，默认关闭；贡献者真机，维护者未复测 |
 | DELUX M900 Pro · 被动 5 字节状态帧 | 已实现，默认关闭；与英菲克同 VID/PID，本机未扫到接收器 |
+| DualSense · 蓝牙 HID 被动电量 | 已实现，默认开启；贡献者真机，维护者未复测 |
 | 经典蓝牙 · HFP 网关节点属性 | EDIFIER W820NB 已验证 |
 | 本机电池 · `GetSystemPowerStatus` | 已接入，可选开启 |
 

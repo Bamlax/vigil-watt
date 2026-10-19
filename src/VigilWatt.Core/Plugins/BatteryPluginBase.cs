@@ -18,6 +18,9 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     /// <summary>本插件处理的设备类型（UI 选图标用）。</summary>
     public abstract DeviceKind Kind { get; }
 
+    /// <summary>新建设备时的来源。默认 2.4G；蓝牙 HID 插件自行覆写。</summary>
+    protected virtual DeviceSource Source => DeviceSource.Hid24G;
+
     /// <summary>
     /// 见 <see cref="IBatteryPlugin.SupportsFastDiscovery"/>：是否参与 DeviceManager 的 15 秒快速发现节拍。
     /// 默认 false（会写帧的插件保持默认值）；**只有纯被动零写入插件**才该覆盖成 true。
@@ -262,7 +265,7 @@ public abstract class BatteryPluginBase : IBatteryPlugin
             {
                 Id = $"{Name.ToLowerInvariant()}:{PluginUtils.StableHash(o.Info.DevicePath)}",
                 Name = BuildDisplayName(o.Info),
-                Source = DeviceSource.Hid24G,
+                Source = Source,
                 Kind = Kind,
                 Protocol = protocol,
                 BatteryPercent = percent,

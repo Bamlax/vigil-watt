@@ -67,6 +67,7 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | HECATE G5M Pro · passive report `0x04` | Implemented; verified by the contributor, not retested here |
 | AULA F99 Pro · `0x13` session/push | Implemented, off by default; contributor hardware only |
 | DELUX M900 Pro · passive 5-byte status | Implemented, off by default; same VID/PID as Inphic, receiver not seen here |
+| DualSense · passive Bluetooth HID | Implemented, on by default; contributor hardware only |
 | Classic Bluetooth · HFP gateway device-node property | EDIFIER W820NB verified |
 | System battery · `GetSystemPowerStatus` | Implemented; can be enabled optionally |
 

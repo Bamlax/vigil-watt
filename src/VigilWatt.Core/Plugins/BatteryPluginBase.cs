@@ -14,9 +14,13 @@ public abstract class BatteryPluginBase : IBatteryPlugin
 {
     public abstract string Name { get; }
     public abstract string DisplayName { get; }
+    public abstract string DisplayNameEn { get; }
 
     /// <summary>本插件处理的设备类型（UI 选图标用）。</summary>
     public abstract DeviceKind Kind { get; }
+
+    /// <summary>新建设备时的来源。默认 2.4G；蓝牙 HID 插件自行覆写。</summary>
+    protected virtual DeviceSource Source => DeviceSource.Hid24G;
 
     /// <summary>
     /// 见 <see cref="IBatteryPlugin.SupportsFastDiscovery"/>：是否参与 DeviceManager 的 15 秒快速发现节拍。
@@ -36,6 +40,9 @@ public abstract class BatteryPluginBase : IBatteryPlugin
 
     /// <summary>供子类/基类被动监听推送轮询外的状态更新。</summary>
     protected void RaiseStatusPushed(DeviceStatus status) => StatusPushed?.Invoke(status);
+
+    /// <summary>认领时没有读数是否标离线。默认 true，避免只剩 dongle 时假装在线。</summary>
+    protected virtual bool NullPercentMeansOffline => true;
 
     /// <summary>
     /// 认领成功后是否启动后台被动监听（只读不写）。
@@ -198,6 +205,8 @@ public abstract class BatteryPluginBase : IBatteryPlugin
                 gone.Status.IsOnline = false;
                 _claims.Release(path, Name);
                 Log.Info($"{DisplayName} 设备已移除: {path}");
+                // DeviceManager 只收返回列表；不上报则拔出后条目永远在线。
+                claimed.Add(gone.Status);
             }
         }
 
@@ -257,20 +266,20 @@ public abstract class BatteryPluginBase : IBatteryPlugin
             {
                 Id = $"{Name.ToLowerInvariant()}:{PluginUtils.StableHash(o.Info.DevicePath)}",
                 Name = BuildDisplayName(o.Info),
-                Source = DeviceSource.Hid24G,
-                Kind = Kind,
+                Source = Source,
+                Kind = ResolveKind(protocol),
                 Protocol = protocol,
                 BatteryPercent = percent,
                 Charging = charging,
-                // 认领了却拿不到读数 = 设备在位但不可读（如北通手柄已关机、只剩 dongle），
-                // 这时**必须标离线**：假装在线会让设备列表说谎。
-                IsOnline = percent.HasValue,
+                // 无读数默认离线。子类把 NullPercentMeansOffline 覆写为 false 时保持在线。
+                IsOnline = percent.HasValue || !NullPercentMeansOffline,
             };
             var dev = new TrackedDevice
             {
                 Info = o.Info, Handle = o.Handle!, Status = status, Protocol = protocol,
                 Filter = CreateFilter(percent), FreshlyClaimed = true,
-                LastPassiveAt = percent.HasValue ? DateTimeOffset.Now : default,
+                // 无读数但仍在线也要记下时刻，否则静音兜底永不触发。
+                LastPassiveAt = status.IsOnline ? DateTimeOffset.Now : default,
             };
             _devices[o.Info.DevicePath] = dev;
             if (SupportsPassiveListen)
@@ -657,6 +666,12 @@ public abstract class BatteryPluginBase : IBatteryPlugin
         if (probedPercent.HasValue) filter.Seed(probedPercent.Value);
         return filter;
     }
+
+    /// <summary>
+    /// 按协议细分设备类型（<see cref="DeviceStatus.Kind"/> 的最终值），默认 = <see cref="Kind"/>。
+    /// 一个插件管多种设备的品牌（迈从的键 + 鼠）覆盖它；只在认领落地时调用，只影响图标。
+    /// </summary>
+    protected virtual DeviceKind ResolveKind(string protocol) => Kind;
 
     /// <summary>接口是否属于本插件（按 VID/usage/报告长度严格过滤——多滤不会漏设备，少滤可能碰别家硬件）。</summary>
     protected abstract bool IsCandidate(HidDeviceInfo info);

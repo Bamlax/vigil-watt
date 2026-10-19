@@ -30,7 +30,11 @@ VigilWatt.sln
 │   │   ├── Rapoo/RapooPlugin          # 雷柏 status-report7（纯被动零写入）
 │   │   ├── Mchose/MchosePlugin        # 0x13 会话协议（在用）+ QHW 0x4D（备用）
 │   │   ├── Betop/BetopPlugin          # 北通手柄：厂商接口 0x15 状态报告 + T9 被动流 + BetopCodec（纯逻辑）
-│   │   └── Inphic/                    # 英菲克 report 0x03 被动状态帧
+│   │   ├── Inphic/                    # 英菲克 report 0x03 被动状态帧
+│   │   ├── Hecate/                    # HECATE report 0x04 被动状态帧
+│   │   ├── Delux/                     # DELUX 0x000A 被动状态帧
+│   │   ├── Aula/                      # AULA F99 Pro：复用 0x13 会话帧，默认关
+│   │   └── Sony/                      # DualSense 蓝牙 HID 只读电量
 │   ├── Models/DeviceStatus            # 统一设备状态快照（Id/电量/充电/在线）
 │   ├── Settings/AppSettings           # settings.json 读写
 │   ├── Storage/HistoryStore           # SQLite（Microsoft.Data.Sqlite）：写入/查询/按设备删除/VACUUM

@@ -20,6 +20,14 @@ public class DeviceSourceInfoTests
     }
 
     [Fact]
+    public void S3_dualsense前缀恢复为蓝牙()
+    {
+        Assert.Equal(DeviceSource.BluetoothClassic, DeviceSourceInfo.FromId("dualsense:abc"));
+        Assert.Equal(DeviceSource.BluetoothClassic, DeviceSourceInfo.FromId("btc:abc"));
+        Assert.Equal(DeviceSource.Hid24G, DeviceSourceInfo.FromId("hecate:abc"));
+    }
+
+    [Fact]
     public void S2_标签非空_且三种来源互不重复()
     {
         var labels = Enum.GetValues<DeviceSource>().Select(DeviceSourceInfo.ShortLabel).ToList();

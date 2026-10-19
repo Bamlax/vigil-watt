@@ -66,6 +66,11 @@ public class AppSettings
         ["Rapoo"] = true,     // 雷柏走纯被动心跳读取，零写入，默认开启
         ["Betop"] = true,     // 北通手柄：发官方同款只读状态查询（cmd=0x5），默认开启
         ["Inphic"] = true,    // 英菲克 report 0x03 被动监听，不发送任何帧
+        ["Hecate"] = true,    // HECATE/漫步者电竞：厂商集合 0xFF1C/0x0092 被动状态帧，零写入（见 docs/hardware/protocols.md §7）
+        ["Delux"] = false,    // 与英菲克同为 1D57:FA65，只读 0x000A；本机尚未扫到该接收器，默认关
+        ["Aula"] = false,     // 狼蛛 F99 Pro：要写 0x13 会话帧才能读电量，默认关闭
+        ["DualSense"] = true, // 索尼手柄蓝牙 HID 只读，不发送报告（见 docs/hardware/dualsense.md）
+        ["Ganss"] = false,   // GANSS GS3104T-Pro：发固定查询帧才能读电量（会写），默认关闭
     };
 
     /// <summary>是否把本机（笔记本）电池也纳入监控。默认关闭——它是"另一类设备"，不像外设那样需要盯着，用户明确要时才开（见设置页「监控本机电量」）。
@@ -122,6 +127,14 @@ public class AppSettings
             else
                 foreach (var (name, on) in defaults.PluginEnabled)
                     _cached.PluginEnabled.TryAdd(name, on);
+
+            // 反向清理：插件被删掉后遗留的键（如已删除的 Elan 插件）留在配置里只会误导人以为它还在。
+            // 默认表就是"当前存在的插件"的唯一清单，不在这张表里的键一律丢弃；下次保存时从 settings.json 消失。
+            // 对降级场景无害：老版本会按自己的默认表重新补键。
+            if (_cached.PluginEnabled != null)
+                foreach (var stale in _cached.PluginEnabled.Keys
+                             .Where(k => !defaults.PluginEnabled.ContainsKey(k)).ToList())
+                    _cached.PluginEnabled.Remove(stale);
 
             return _cached;
         }

@@ -16,6 +16,7 @@ public sealed class InphicPlugin : BatteryPluginBase
 
     public override string Name => "Inphic";
     public override string DisplayName => "英菲克";
+    public override string DisplayNameEn => "INPHIC";
     public override DeviceKind Kind => DeviceKind.Mouse;
     public override bool SupportsFastDiscovery => true;
     protected override TimeSpan ProbeCooldown => TimeSpan.FromSeconds(5);

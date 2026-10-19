@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Linq;
 using VigilWatt.App.Services;
-using VigilWatt.Core.Models;
 using VigilWatt.Core.Plugins;
 using VigilWatt.Core.Utils;
 using Microsoft.UI.Dispatching;
@@ -58,9 +57,10 @@ public sealed partial class SettingsPage : Page
         foreach (var (value, label) in LogLevelOptions.Choices)
             LogLevelCombo.Items.Add(new ComboBoxItem { Content = label, Tag = value });
 
-        // 插件开关动态生成：新插件（IBatteryPlugin 实现）自动出现在设置页
+        // 插件开关动态生成：新插件（IBatteryPlugin 实现）自动出现在设置页。
+        // 按 Name 排序而不是反射顺序：GetTypes() 的次序随编译/重构漂移，设置页条目会莫名其妙换位置。
         bool first = true;
-        foreach (var plugin in App.Services.Manager.Plugins)
+        foreach (var plugin in App.Services.Manager.Plugins.OrderBy(p => p.Name, StringComparer.Ordinal))
         {
             AddPluginRow(plugin, first);
             first = false;
@@ -173,11 +173,12 @@ public sealed partial class SettingsPage : Page
 
         var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
         text.Children.Add(new TextBlock { Text = plugin.DisplayName, Style = (Style)Resources["RowTitleStyle"] });
-        text.Children.Add(new TextBlock { Text = KindText(plugin.Kind), Style = (Style)Resources["RowDescStyle"] });
+        text.Children.Add(new TextBlock { Text = plugin.DisplayNameEn, Style = (Style)Resources["RowDescStyle"] });
 
         var row = new Grid { ColumnSpacing = 16, Padding = new Thickness(0, 12, 0, 12) };
-        AutomationProperties.SetName(row, $"{plugin.DisplayName} {plugin.Name}");
-        AutomationProperties.SetHelpText(row, $"2.4G 设备插件 · {KindText(plugin.Kind)}");
+        // 中英两名都进无障碍名：用户按哪种写法搜都命中（"北通 BETOP" / "迈从 MCHOSE"）。
+        AutomationProperties.SetName(row, $"{plugin.DisplayName} {plugin.DisplayNameEn}");
+        AutomationProperties.SetHelpText(row, "2.4G 设备插件");
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         Grid.SetColumn(text, 0);
@@ -397,17 +398,6 @@ public sealed partial class SettingsPage : Page
     {
         public string SearchText => $"{Title} {Description} {Category} {Aliases}";
     }
-
-    /// <summary>插件声明了设备类型，用一句人话解释这个开关管的是什么设备。</summary>
-    private static string KindText(DeviceKind kind) => kind switch
-    {
-        DeviceKind.Mouse => "鼠标 · 2.4G 私有协议",
-        DeviceKind.Keyboard => "键盘 · 2.4G 私有协议",
-        DeviceKind.Headset => "耳机 · 2.4G 私有协议",
-        DeviceKind.Speaker => "音箱 · 2.4G 私有协议",
-        DeviceKind.Gamepad => "手柄 · 2.4G 私有协议",
-        _ => "2.4G 私有协议",
-    };
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {

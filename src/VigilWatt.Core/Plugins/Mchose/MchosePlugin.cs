@@ -17,7 +17,18 @@ public sealed class MchosePlugin : BatteryPluginBase
 
     public override string Name => SettingsKey;
     public override string DisplayName => "迈从";
-    public override DeviceKind Kind => DeviceKind.Keyboard;
+    public override string DisplayNameEn => "MCHOSE";
+    /// <summary>一个插件同时管键盘与鼠标（罗技先例）：声明 Unknown，具体图标由 <see cref="ResolveKind"/> 按协议给。</summary>
+    public override DeviceKind Kind => DeviceKind.Unknown;
+
+    /// <summary>键盘 V1 会话协议（report 0x13）。</summary>
+    private const string ProtocolKeyboardV1 = "keyboard-v1";
+
+    /// <summary>鼠标 V2 世代：纯被动 E2 状态帧 + 0x11/0x06 触发上报。</summary>
+    private const string ProtocolMouseV2 = "mouse-v2";
+
+    /// <summary>V9 Pro 耳机：64 字节固定查询帧（帧结构与判据见 <see cref="MchoseV9ProCodec"/>）。同品牌另一条链路，与键鼠判据完全独立。</summary>
+    private const string ProtocolHeadsetV9 = "headset-v9";
 
     private const byte QhwReportId = 0x4D;
     private const ushort CmdGetBattery = 0x0904;  // 2308
@@ -67,12 +78,42 @@ public sealed class MchosePlugin : BatteryPluginBase
         if (info.VendorId == Betop.BetopPlugin.BetopVid) return false;
         // 英菲克接收器也暴露 64 字节 vendor 输出接口；避免误发迈从会话/查询帧
         if (info.VendorId == Inphic.InphicPlugin.InphicVid) return false;
-        // consumer/system/标准键盘接口即使产品名含 MCHOSE 也不是配置通道，必须是 vendor 用法 + ≥20/20 的 I/O
-        bool vendor = info.UsagePage >= 0xFF00 || info.Usage >= 0xFF00;
-        if (!vendor) return false;
-        if (info.OutputReportLength == 20 && info.InputReportLength == 20) return true; // QHW/邮箱通道
-        if (info.OutputReportLength == 64 && info.InputReportLength == 64) return true; // 大帧 QHW 通道
-        return false;
+        // HECATE 的厂商集合同样是 64 字节进出，不能当成迈从接口
+        if (info.VendorId == Hecate.HecatePlugin.HecateVid) return false;
+        // AULA F99 Pro 也是 20 字节 0x13 接口，会话帧只能由 AulaPlugin 在开关打开后发送
+        if (info.VendorId == Aula.AulaPlugin.AulaVid) return false;
+        // 品牌排除之后，判据全在分类器里（耳机先分流、键鼠白名单、厂商用法、报告长度），有单测覆盖
+        return Classify(info) != MchoseInterfaceKind.None;
+    }
+
+    /// <summary>把 <see cref="HidDeviceInfo"/> 摊成分类器要的字段，避免判据在两处各写一遍。</summary>
+    private static MchoseInterfaceKind Classify(HidDeviceInfo info)
+        => MchoseInterfaceClassifier.Classify(info.VendorId, info.ProductId, info.DevicePath,
+            info.UsagePage, info.Usage, info.InputReportLength, info.OutputReportLength,
+            info.FeatureReportLength, info.OutputReportId);
+
+    protected override DeviceKind ResolveKind(string protocol)
+        => protocol switch
+        {
+            ProtocolMouseV2 => DeviceKind.Mouse,
+            ProtocolHeadsetV9 => DeviceKind.Headset,
+            _ => DeviceKind.Keyboard,
+        };
+
+    /// <summary>显示名：接收器产品名常是泛化的「MCHOSE 2.4G Wireless」，识别出型号时用型号替换；
+    /// 加「迈从」前缀方便设备列表一眼认品牌。型号来源见 <see cref="KnownModelByPath"/>。</summary>
+    protected override string BuildDisplayName(HidDeviceInfo info)
+    {
+        // 耳机接收器是独立 VID/PID，只对应已验证的 V9 Pro；协议里没有型号回执，型号名只能写死
+        if (info.VendorId == MchoseV9ProCodec.VendorId && info.ProductId == MchoseV9ProCodec.ProductId)
+            return "迈从 V9 Pro";
+
+        var product = string.IsNullOrEmpty(info.Product) ? "" : info.Product.Replace("MCHOSE", "").Trim();
+        var model = KnownModelByPath.TryGetValue(info.DevicePath, out var m) ? m : "";
+        var name = model.Length > 0 && product.Contains("2.4G") ? model
+                 : product.Length > 0 ? product
+                 : model;
+        return string.IsNullOrEmpty(name) ? $"迈从 ({info.VidPid})" : $"迈从 {name}";
     }
 
     /// <summary>
@@ -80,6 +121,9 @@ public sealed class MchosePlugin : BatteryPluginBase
     /// 同一条路径永远是同一个型号，而探测失败最常见的原因是"键盘在睡"，说明不了协议变了。
     /// </summary>
     private static readonly ConcurrentDictionary<string, string> KnownProtocolByPath = new();
+
+    /// <summary>接口路径 → 会话 ACK 密码段识别出的型号名（<see cref="BuildDisplayName"/> 用；识别不出就没有条目）。</summary>
+    private static readonly ConcurrentDictionary<string, string> KnownModelByPath = new();
 
     /// <summary>
     /// 日志去重 key = <c>路径|用途</c>。配合 <see cref="Log.Once"/> / <see cref="Log.ResetOnce"/>
@@ -91,14 +135,37 @@ public sealed class MchosePlugin : BatteryPluginBase
     private const string LogKeyQhwSkip = "qhw-skip";          // "这条通道不是 QHW"
     private const string LogKeyQhwNoPermit = "qhw-no-permit"; // "没开写入许可，跳过主动查询"
     private const string LogKeyKbV1Silent = "kbv1-silent";    // "keyboard-v1 问了两次都不应答"
+    private const string LogKeyMouseSilent = "mouse-silent";  // "鼠标探测没等到 E2 帧"
+    private const string LogKeyMousePokeFail = "mouse-poke-fail"; // "触发帧写失败（接口无输出通道）"
+    private const string LogKeyV9Silent = "v9-silent"; // "V9 Pro 查询没等到电量响应"
 
-    /// <summary>协议探测：官方 QHW（新世代）→ 键盘 V1 会话协议（本机 G87）。</summary>
+    /// <summary>协议探测：鼠标 V2（被动等 E2）→ 官方 QHW（新世代）→ 键盘 V1 会话协议（G87 / G87 V2）。</summary>
     protected override (string Protocol, int? Percent, ChargingState Charging)? Probe(HidDeviceHandle handle)
     {
         // consumer/system 等小接口没有可用的输出通道，直接排除（避免握手帧越界）
         if (handle.Info.OutputReportLength < 20 || handle.Info.InputReportLength < 20) return null;
 
         var path = handle.Info.DevicePath;
+        var kind = MchoseInterfaceClassifier.Classify(handle.Info.VendorId, handle.Info.ProductId, path,
+            handle.Info.UsagePage, handle.Info.Usage, handle.Info.InputReportLength,
+            handle.Info.OutputReportLength, handle.Info.FeatureReportLength, handle.Info.OutputReportId);
+
+        // 耳机必须排在下面「≥60 字节只走鼠标」之前：它的输出同样是 64 字节，
+        // 落到鼠标分支会往耳机发 0x11/0x06 触发帧。判据是完整接口匹配，抢不走键盘/鼠标的通道。
+        if (kind == MchoseInterfaceKind.HeadsetV9)
+        {
+            var headset = TryHeadsetV9(handle);
+            if (headset != null) KnownProtocolByPath[path] = ProtocolHeadsetV9;
+            return headset;
+        }
+
+        // ≥60 的接口只可能是鼠标接收器：它不是 0x13 会话通道，在这条通道上发键盘帧没有意义
+        if (kind == MchoseInterfaceKind.MouseV2)
+        {
+            var mouse = TryMouseV2(handle);
+            if (mouse != null) KnownProtocolByPath[path] = ProtocolMouseV2;
+            return mouse;
+        }
 
         // 已知协议：只试对应那条通道，**失败就返回、不清记忆**。
         //
@@ -120,8 +187,8 @@ public sealed class MchosePlugin : BatteryPluginBase
         if (kbV1.HasValue)
         {
             var (p, c) = kbV1.Value;
-            KnownProtocolByPath[path] = "keyboard-v1";
-            return ("keyboard-v1", p, c);
+            KnownProtocolByPath[path] = ProtocolKeyboardV1;
+            return (ProtocolKeyboardV1, p, c);
         }
         return null;
     }
@@ -131,20 +198,24 @@ public sealed class MchosePlugin : BatteryPluginBase
         => known switch
         {
             "qhw" or "qhw-push" => TryQhw(handle),
-            "keyboard-v1" => TryKeyboardV1(handle) is { } kb ? ("keyboard-v1", kb.Percent, kb.Charging) : null,
+            ProtocolKeyboardV1 => TryKeyboardV1(handle) is { } kb ? (ProtocolKeyboardV1, kb.Percent, kb.Charging) : null,
+            ProtocolMouseV2 => TryMouseV2(handle),
+            ProtocolHeadsetV9 => TryHeadsetV9(handle),
             _ => null,
         };
 
     protected override (int? Percent, ChargingState Charging)? PollDevice(TrackedDevice dev)
     {
         // 熔断 / 未开写入 / 纯推送协议：读数交给后台被动监听。这几条都没发帧，故不计失败。
-        if (!CanWrite(dev) || dev.Protocol == "qhw-push")
+        // mouse-v2 的读数是接收器自发 E2 推送，这里发帧只会干扰鼠标。
+        if (!CanWrite(dev) || dev.Protocol is "qhw-push" or ProtocolMouseV2)
             return null;
 
         var read = dev.Protocol switch
         {
             "qhw" => PollQhw(dev),
-            "keyboard-v1" => PollKeyboardV1(dev),
+            ProtocolKeyboardV1 => PollKeyboardV1(dev),
+            ProtocolHeadsetV9 => PollHeadsetV9(dev),
             _ => null,
         };
 
@@ -163,7 +234,18 @@ public sealed class MchosePlugin : BatteryPluginBase
     protected override (int? Percent, ChargingState Charging, bool Offline)? TryParsePassiveInput(
         TrackedDevice dev, byte[] input)
     {
-        if (dev.Protocol is "keyboard-v1")
+        if (dev.Protocol == ProtocolMouseV2)
+        {
+            var kind = MchoseMouseCodec.ParseStatus(input, out int pct, out bool chg);
+            if (kind == MouseV2PushKind.Status)
+                return (pct, chg ? ChargingState.Charging : ChargingState.Discharging, Offline: false);
+            // 关机/休眠占位帧很常见，记 Debug 即可：每帧一条 WARN 会把日志刷满
+            if (kind == MouseV2PushKind.StatusInvalid)
+                Log.Debug($"迈从 鼠标 E2 帧电量越界（={pct}）: {Log.Hex(input)}");
+            return null;
+        }
+
+        if (dev.Protocol == ProtocolKeyboardV1)
         {
             var push = MchoseV1Codec.ParsePush(input);
             if (push.Kind == V1PushKind.Battery)
@@ -377,7 +459,107 @@ public sealed class MchosePlugin : BatteryPluginBase
     }
 
     /// <summary>
-    /// 键盘 V1 协议（本机 dongle 41E4:2001 实测打通，与官方 M HUB WEB 抓包一致）。
+    /// 鼠标 V2 探测：先纯被动等 E2 状态帧（接收器约 10 秒推一次）；等不到才发一次触发帧
+    /// （0x11/0x06，官方驱动同款）。触发帧构造见 <see cref="MchoseMouseCodec.BuildPokeFrame"/>。
+    /// </summary>
+    private static (string Protocol, int? Percent, ChargingState Charging)? TryMouseV2(HidDeviceHandle handle)
+    {
+        if (!IsWritesEnabled(SettingsKey)) return null;
+
+        var push = ListenE2(handle, TimeSpan.FromSeconds(3));
+        if (!push.HasValue)
+        {
+            // 被动等不到才写：多数时候 E2 自己会来，写帧只是唤醒手段
+            var poke = MchoseMouseCodec.BuildPokeFrame(handle.Info.OutputReportLength);
+            if (!handle.WriteOutput(poke, TimeSpan.FromMilliseconds(500), quiet: true))
+            {
+                // quiet：非鼠标接口（或鼠标睡着）写失败是预期结果，逐次记 WARN 只会掩盖真故障
+                Log.Once(LogLevel.Debug, LogKey(handle, LogKeyMousePokeFail),
+                    $"迈从 鼠标触发帧写失败（此接口可能无输出通道）: {handle.Info.DevicePath}");
+                return null;
+            }
+            Log.ResetOnce(LogKey(handle, LogKeyMousePokeFail));
+            push = ListenE2(handle, TimeSpan.FromSeconds(3));
+        }
+
+        if (push.HasValue)
+            return (ProtocolMouseV2, push.Value.Percent,
+                push.Value.Charging ? ChargingState.Charging : ChargingState.Discharging);
+
+        Log.Once(LogLevel.Debug, LogKey(handle, LogKeyMouseSilent),
+            $"迈从 鼠标探测无响应（鼠标可能在睡；收到 E2 推送后会再记）: {handle.Info.DevicePath}");
+        return null;
+    }
+
+    /// <summary>纯被动监听 E2 状态帧，不写任何字节。</summary>
+    private static (int Percent, bool Charging)? ListenE2(HidDeviceHandle handle, TimeSpan window)
+    {
+        var deadline = DateTime.UtcNow + window;
+        while (DateTime.UtcNow < deadline)
+        {
+            var input = handle.ReadInput(TimeSpan.FromMilliseconds(300));
+            if (input == null) continue;
+            var kind = MchoseMouseCodec.ParseStatus(input, out int pct, out bool chg);
+            if (kind != MouseV2PushKind.Status) continue;
+            Log.Info($"迈从 鼠标 E2 状态帧: 电量={pct} 充电={chg} 原始={Log.Hex(input)}");
+            return (pct, chg);
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// V9 Pro 耳机探测：发一条固定查询帧（见 <see cref="MchoseV9ProCodec"/>），750 毫秒内解析响应。
+    /// 耳机与键鼠共用同一个插件开关——插件开关是**品牌级**的写入授权（`AGENTS.md` §9），不按型号再分一档。
+    /// </summary>
+    private static (string Protocol, int? Percent, ChargingState Charging)? TryHeadsetV9(HidDeviceHandle handle)
+    {
+        if (!IsWritesEnabled(SettingsKey)) return null;
+        var percent = QueryHeadsetV9(handle);
+        return percent.HasValue ? (ProtocolHeadsetV9, percent, ChargingState.Unknown) : null;
+    }
+
+    /// <summary>
+    /// V9 Pro 轮询：只发一条查询帧。失败记账仍由 <see cref="PollDevice"/> 在发过帧的分支里
+    /// 调 <see cref="BatteryPluginBase.ReportPollFailure"/>——本插件把 `CountPollFailures` 置了 false。
+    /// </summary>
+    private static (int? Percent, ChargingState Charging)? PollHeadsetV9(TrackedDevice dev)
+    {
+        if (!IsWritesEnabled(SettingsKey)) return null;
+        var percent = QueryHeadsetV9(dev.Handle);
+        return percent.HasValue ? (percent, ChargingState.Unknown) : null;
+    }
+
+    /// <summary>
+    /// 写查询帧并等响应。**充电语义未知**，调用方一律给 <see cref="ChargingState.Unknown"/>，不猜。
+    /// 无应答只在状态变化时记一条 Debug：耳机不在位时每 15 秒重探一次，逐次记录会把日志刷满。
+    /// </summary>
+    private static int? QueryHeadsetV9(HidDeviceHandle handle)
+    {
+        if (!handle.WriteOutput(MchoseV9ProCodec.CreateQuery(), TimeSpan.FromMilliseconds(500)))
+            return null;
+
+        var deadline = DateTime.UtcNow + TimeSpan.FromMilliseconds(750);
+        while (DateTime.UtcNow < deadline)
+        {
+            var input = handle.ReadInput(TimeSpan.FromMilliseconds(300));
+            if (input == null) continue;
+            if (!MchoseV9ProCodec.TryParse(input, out int percent))
+            {
+                if (Log.IsEnabled(LogLevel.Debug)) Log.Debug($"迈从 V9 Pro 忽略非电量响应: {Log.Hex(input)}");
+                continue;
+            }
+            Log.ResetOnce(LogKey(handle, LogKeyV9Silent));
+            Log.Info($"迈从 V9 Pro 电量查询: 电量={percent} 标志=0x{input[3]:X2} 原始={Log.Hex(input)}");
+            return percent;
+        }
+
+        Log.Once(LogLevel.Debug, LogKey(handle, LogKeyV9Silent),
+            $"迈从 V9 Pro 查询无响应（耳机多半在关机/休眠；恢复应答后会再记一条）: {handle.Info.DevicePath}");
+        return null;
+    }
+
+    /// <summary>
+    /// 键盘 V1 协议（本机 dongle 41E4:2001 实测打通，G87 V2 接收器 3837:201B 同协议；与官方 M HUB WEB 抓包一致）。
     /// 帧格式与解析全部在 <see cref="MchoseV1Codec"/>（纯函数，有单测）；帧结构见
     /// docs/hardware/protocols.md §1。会话必须先开，否则 dongle 不响应；被崩溃进程占住会话时
     /// 所有人都会静音，需重新插拔释放。
@@ -403,6 +585,13 @@ public sealed class MchosePlugin : BatteryPluginBase
                 Log.Info($"迈从 会话期间即收到电量推送，直接采用");
                 Log.ResetOnce(LogKey(handle, LogKeyKbV1Silent));
                 return read;
+            }
+            // 会话 ACK 的密码段就是接收器型号（官方 getPassWord 同源）：帧本来就要收，顺手记下零成本
+            var model = MchoseMouseCodec.ModelFromSessionAck(input);
+            if (model != null)
+            {
+                KnownModelByPath[handle.Info.DevicePath] = model;
+                Log.Info($"迈从 会话 ACK 识别型号: {model} 原始={Log.Hex(input)}");
             }
             if (Log.IsEnabled(LogLevel.Debug)) Log.Debug($"迈从 会话ACK: {Log.Hex(input)}");
         }

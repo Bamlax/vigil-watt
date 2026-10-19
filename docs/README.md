@@ -9,6 +9,7 @@
 - [code-flow.md](project/code-flow.md)：启动、设备发现、轮询和 UI 更新流程。
 - [experience.md](project/experience.md)：项目经验与后续规划；不维护待办。
 - [changelog.md](project/changelog.md)：按日期记录重要改动及原因。
+- [contributions.md](project/contributions.md)：收进仓库的社区改动、贡献者和没有采纳的部分。
 - [release-notes.md](project/release-notes.md)：用户向更新日志，随安装包分发；关于页与更新确认框读它。
 
 ## 开发与排查
@@ -23,6 +24,9 @@
 
 - [sources.md](hardware/sources.md)：协议、功能方案的依据、外部参考和验证范围；追溯来源先看这里。
 - [protocols.md](hardware/protocols.md)：设备协议帧、已验证行为和已证伪路径。
+- [dualsense.md](hardware/dualsense.md)：DualSense 蓝牙电量的帧、CRC 和未复测边界。
+- [ganss.md](hardware/ganss.md)：GANSS GS3104T-Pro 的查询帧、认领判据风险与验证清单。
+- [mchose-v9-pro.md](hardware/mchose-v9-pro.md)：MCHOSE V9 Pro 耳机的查询帧与未复测边界。
 - [safety.md](hardware/safety.md)：硬件写入规则与事故复盘；任何写入改动前必读。
 - [debugging.md](hardware/debugging.md)：官方软件抓包、HID 观测和协议验证步骤。
 

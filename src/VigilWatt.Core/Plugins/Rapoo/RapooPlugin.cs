@@ -15,6 +15,7 @@ public sealed class RapooPlugin : BatteryPluginBase
 
     public override string Name => "Rapoo";
     public override string DisplayName => "雷柏";
+    public override string DisplayNameEn => "RAPOO";
     public override DeviceKind Kind => DeviceKind.Mouse;
 
     /// <summary>

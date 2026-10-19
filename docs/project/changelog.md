@@ -5,6 +5,8 @@
 
 ## 2026-10-19
 
+- **黑爵 / 雷神电量**：接入 AK870 与 ML903 NearLink Se 的已验证接收器查询，品牌开关沿用中英文命名；补充帧解析与迈从接口隔离测试，详见 `hardware/ak870-ml903.md`。
+
 - **HECATE G5M Pro**：接入只读电量插件，认领限定 `35BB:D00B` 的厂商集合；拔出设备时把离线状态交回设备列表。帧样本来自贡献者，本机未复测。见 `hardware/protocols.md` §7。
 - **AULA F99 Pro / DELUX M900 Pro**：接入两个插件。AULA 会写会话帧，默认关，且不进 15 秒发现。DELUX 只读，但与英菲克同 VID/PID，本机没扫到接收器，也默认关。见 `hardware/protocols.md` §8、§9。
 - **DualSense**：接入蓝牙 HID 只读电量。只认 `054C:0CE6` 的 78 字节报告，CRC 失败丢弃。不拿同一 PR 里的 GANSS 和 V9 Pro。见 `hardware/dualsense.md`。

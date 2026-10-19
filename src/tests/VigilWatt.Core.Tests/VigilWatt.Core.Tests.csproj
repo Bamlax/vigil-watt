@@ -31,6 +31,8 @@
     它靠 HistoryStore(dbPath) 的可选构造参数指向临时库，测试因此不碰真实 history.db。
   -->
   <ItemGroup>
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Thunderobot\ThunderobotCodec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Ajazz\AjazzCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\BatteryReadingFilter.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\PluginUtils.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\DeviceClaimRegistry.cs" />

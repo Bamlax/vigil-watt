@@ -52,6 +52,8 @@
 | 北通 | `PluginEnabled["Betop"]` | **true** | 查询是官方客户端同款只读命令（cmd=0x5），风险低，故默认开 |
 | 罗技 | `PluginEnabled["Logitech"]` | **false** | 发现与读数**全靠写帧**；不继承基类，故自建闸门（`HidppIO.WritesAllowed`）+ 熔断 + 同一张递增退避表（`Plugins/WriteBackoff.cs`） |
 | 雷柏 | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`，零写入 |
+| 黑爵 | `PluginEnabled["Ajazz"]` | **false** | 3151:4011 已验证 F7 状态查询；见 `ak870-ml903.md` |
+| 雷神 | `PluginEnabled["Thunderobot"]` | **false** | 369B:0234 官方 02 设备信息查询；见 `ak870-ml903.md` |
 | 英菲克 | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`；仅读 report `0x03` |
 | HECATE | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`；仅读 `35BB:D00B` 的 report `0x04` |
 | DELUX | 无（纯被动） | **false** | 与英菲克同 VID/PID，只读 `0x000A`；本机未扫到接收器，故默认关 |

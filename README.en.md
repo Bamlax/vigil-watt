@@ -65,6 +65,8 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | Rapoo VT3 Gen 2 · passive `status-report7` | Verified on the developer's device |
 | Inphic ZHEN · passive report `0x03` | Verified on hardware |
 | HECATE G5M Pro · passive report `0x04` | Implemented; verified by the contributor, not retested here |
+| AULA F99 Pro · `0x13` session/push | Implemented, off by default; contributor hardware only |
+| DELUX M900 Pro · passive 5-byte status | Implemented, off by default; same VID/PID as Inphic, receiver not seen here |
 | Classic Bluetooth · HFP gateway device-node property | EDIFIER W820NB verified |
 | System battery · `GetSystemPowerStatus` | Implemented; can be enabled optionally |
 

@@ -65,6 +65,8 @@
 | 雷柏 VT3 二代 · 被动 `status-report7` | 本机验证 |
 | 英菲克 ZHEN · 被动 report `0x03` | 真机验证 |
 | HECATE G5M Pro · 被动 report `0x04` | 已实现；贡献者真机，维护者未复测 |
+| AULA F99 Pro · `0x13` 会话/推送 | 已实现，默认关闭；贡献者真机，维护者未复测 |
+| DELUX M900 Pro · 被动 5 字节状态帧 | 已实现，默认关闭；与英菲克同 VID/PID，本机未扫到接收器 |
 | 经典蓝牙 · HFP 网关节点属性 | EDIFIER W820NB 已验证 |
 | 本机电池 · `GetSystemPowerStatus` | 已接入，可选开启 |
 

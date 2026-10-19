@@ -6,6 +6,7 @@
 ## 2026-10-19
 
 - **HECATE G5M Pro**：接入只读电量插件，认领限定 `35BB:D00B` 的厂商集合；拔出设备时把离线状态交回设备列表。帧样本来自贡献者，本机未复测。见 `hardware/protocols.md` §7。
+- **AULA F99 Pro / DELUX M900 Pro**：接入两个插件。AULA 会写会话帧，默认关，且不进 15 秒发现。DELUX 只读，但与英菲克同 VID/PID，本机没扫到接收器，也默认关。见 `hardware/protocols.md` §8、§9。
 
 ## 2026-10-18
 

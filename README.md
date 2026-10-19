@@ -64,6 +64,7 @@
 | 罗技 Bolt（C548 + MX Master 3S）· HID++ | 真机验证通过 |
 | 雷柏 VT3 二代 · 被动 `status-report7` | 本机验证 |
 | 英菲克 ZHEN · 被动 report `0x03` | 真机验证 |
+| HECATE G5M Pro · 被动 report `0x04` | 已实现；贡献者真机，维护者未复测 |
 | 经典蓝牙 · HFP 网关节点属性 | EDIFIER W820NB 已验证 |
 | 本机电池 · `GetSystemPowerStatus` | 已接入，可选开启 |
 

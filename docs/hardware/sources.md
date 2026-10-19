@@ -19,6 +19,7 @@
 | Rapoo V2 `status-report7` | [pedro3z0/rapoo-software-linux](https://github.com/pedro3z0/rapoo-software-linux)（基于 A HUB 1.0.19 逆向及官方 Web 驱动抓包）；[D3m0nZOnFire/mousectl](https://github.com/D3m0nZOnFire/mousectl)（VT3 PRO 一代实测）。 | 参考协议分析后自行实现被动心跳解析；本机 VT3 二代 `24AE:1412` 已验证，部分状态以本机样本为准。 | `rapoo-software-linux` 标注 MIT；`mousectl` 的许可需以其仓库当前声明为准。两来源设备型号与本机不同，不能直接替代本机验证。 |
 | Betop / 北通厂商接口 | [oitsukiii/betop-battery](https://github.com/oitsukiii/betop-battery) 的 `docs/protocol.md`：对北通官方 Electron 客户端做互操作性分析，不含厂商代码。 | 参考协议文档实现；本机 T9 被动流已验证。 | 项目标注 MIT；本项目验证情况与限制见 [protocols.md](protocols.md)。 |
 | Inphic ZHEN `report 0x03` | 英菲克官方 ZHEN 网页驱动的 WebHID 行为、驱动显示与本机被动输入样本。 | 只读解析输入 report `0x03`，充放电状态经实机接线验证；不发送网页驱动的 report `0x04`。 | 基于官方行为和本机样本自行实现；未记录外部代码复用。见 [protocols.md](protocols.md)。 |
+| HECATE G5M Pro `report 0x04` | 贡献者 dotisland 对官方 HECATE Connect 与接收器 `35BB:D00B` 的被动抓包（PR #13）。 | 只读解析 report `0x04`，不发送命令。帧与充放电对照是贡献者声明，本机未复测。 | 未复用官方软件代码。见 [protocols.md](protocols.md) §7。 |
 | 弱水时砂炽天使 2.4G | 官方 RoseLink（Flutter + BLE 自定义协议）及官方升级助手逆向；同时检查 2.4G dongle 的 HID 通道。 | 用于确认 RoseLink 电量协议不含电量命令、正常 2.4G 模式无可用电量通道；本项目不接入该设备电量。 | 逆向结论用于能力边界判断，不包含外部代码复用。见 [protocols.md](protocols.md)。 |
 | Classic Bluetooth 耳机电量 | Windows HFP 网关设备节点的 `DEVPKEY_Device_BatteryLevel` 属性；与 Windows 设置显示同源。 | 通过 PnP 设备节点读取；本机 EDIFIER W820NB 已验证。 | Windows 系统属性读取方案；不是 BLE AEP 属性。实现背景见 [runtime-pitfalls.md](../dev/runtime-pitfalls.md)。 |
 

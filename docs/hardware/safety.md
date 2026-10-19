@@ -51,6 +51,7 @@
 | 罗技 | `PluginEnabled["Logitech"]` | **false** | 发现与读数**全靠写帧**；不继承基类，故自建闸门（`HidppIO.WritesAllowed`）+ 熔断 + 同一张递增退避表（`Plugins/WriteBackoff.cs`） |
 | 雷柏 | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`，零写入 |
 | 英菲克 | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`；仅读 report `0x03` |
+| HECATE | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`；仅读 `35BB:D00B` 的 report `0x04` |
 
 三条硬约束：
 

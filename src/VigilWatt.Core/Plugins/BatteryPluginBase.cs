@@ -37,6 +37,9 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     /// <summary>供子类/基类被动监听推送轮询外的状态更新。</summary>
     protected void RaiseStatusPushed(DeviceStatus status) => StatusPushed?.Invoke(status);
 
+    /// <summary>认领时没有读数是否标离线。默认 true，避免只剩 dongle 时假装在线。</summary>
+    protected virtual bool NullPercentMeansOffline => true;
+
     /// <summary>
     /// 认领成功后是否启动后台被动监听（只读不写）。
     /// 雷柏心跳 / 迈从 0A 推送 / 北通 T9 流 等覆盖为 true，并实现 <see cref="TryParsePassiveInput"/>。
@@ -198,6 +201,8 @@ public abstract class BatteryPluginBase : IBatteryPlugin
                 gone.Status.IsOnline = false;
                 _claims.Release(path, Name);
                 Log.Info($"{DisplayName} 设备已移除: {path}");
+                // DeviceManager 只收返回列表；不上报则拔出后条目永远在线。
+                claimed.Add(gone.Status);
             }
         }
 
@@ -262,15 +267,15 @@ public abstract class BatteryPluginBase : IBatteryPlugin
                 Protocol = protocol,
                 BatteryPercent = percent,
                 Charging = charging,
-                // 认领了却拿不到读数 = 设备在位但不可读（如北通手柄已关机、只剩 dongle），
-                // 这时**必须标离线**：假装在线会让设备列表说谎。
-                IsOnline = percent.HasValue,
+                // 无读数默认离线。子类把 NullPercentMeansOffline 覆写为 false 时保持在线。
+                IsOnline = percent.HasValue || !NullPercentMeansOffline,
             };
             var dev = new TrackedDevice
             {
                 Info = o.Info, Handle = o.Handle!, Status = status, Protocol = protocol,
                 Filter = CreateFilter(percent), FreshlyClaimed = true,
-                LastPassiveAt = percent.HasValue ? DateTimeOffset.Now : default,
+                // 无读数但仍在线也要记下时刻，否则静音兜底永不触发。
+                LastPassiveAt = status.IsOnline ? DateTimeOffset.Now : default,
             };
             _devices[o.Info.DevicePath] = dev;
             if (SupportsPassiveListen)

@@ -64,6 +64,7 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | Logitech Bolt receiver (C548 + MX Master 3S) · HID++ | Verified on hardware |
 | Rapoo VT3 Gen 2 · passive `status-report7` | Verified on the developer's device |
 | Inphic ZHEN · passive report `0x03` | Verified on hardware |
+| HECATE G5M Pro · passive report `0x04` | Implemented; verified by the contributor, not retested here |
 | Classic Bluetooth · HFP gateway device-node property | EDIFIER W820NB verified |
 | System battery · `GetSystemPowerStatus` | Implemented; can be enabled optionally |
 

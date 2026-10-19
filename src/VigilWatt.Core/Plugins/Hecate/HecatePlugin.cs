@@ -17,7 +17,8 @@ public sealed class HecatePlugin : BatteryPluginBase
     public const ushort VendorUsage = 0x0092;
 
     public override string Name => "Hecate";
-    public override string DisplayName => "HECATE";
+    public override string DisplayName => "漫步者电竞";
+    public override string DisplayNameEn => "HECATE";
     public override DeviceKind Kind => DeviceKind.Mouse;
     public override bool SupportsFastDiscovery => true;
     protected override TimeSpan ProbeCooldown => TimeSpan.FromSeconds(5);

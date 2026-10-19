@@ -25,7 +25,8 @@ public sealed class BetopPlugin : BatteryPluginBase
     private const int FallbackWriteLength = 64;
 
     public override string Name => "Betop";
-    public override string DisplayName => "北通手柄";
+    public override string DisplayName => "北通";
+    public override string DisplayNameEn => "BETOP";
     public override DeviceKind Kind => DeviceKind.Gamepad;
 
     /// <summary>

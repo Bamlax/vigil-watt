@@ -18,7 +18,8 @@ public sealed class AulaPlugin : BatteryPluginBase
     private const string SettingsKey = "Aula";
 
     public override string Name => SettingsKey;
-    public override string DisplayName => "AULA";
+    public override string DisplayName => "狼蛛";
+    public override string DisplayNameEn => "AULA";
     public override DeviceKind Kind => DeviceKind.Keyboard;
 
     /// <summary>失败后 10 秒内不再开会话。不进 15 秒发现，写入留在 60 秒主轮询。</summary>

@@ -33,6 +33,7 @@ public sealed class LogitechPlugin : IBatteryPlugin
 
     public string Name => SettingsKey;
     public string DisplayName => "罗技";
+    public string DisplayNameEn => "LOGITECH";
 
     /// <summary>罗技接收器同时管鼠标和键盘，按型号分不出来 → Unknown，UI 退回按名字猜。</summary>
     public DeviceKind Kind => DeviceKind.Unknown;

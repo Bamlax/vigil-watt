@@ -13,6 +13,7 @@ public sealed class DualSensePlugin : BatteryPluginBase
 {
     public override string Name => "DualSense";
     public override string DisplayName => "索尼";
+    public override string DisplayNameEn => "SONY";
     public override DeviceKind Kind => DeviceKind.Gamepad;
     public override bool SupportsFastDiscovery => true;
     protected override DeviceSource Source => DeviceSource.BluetoothClassic;

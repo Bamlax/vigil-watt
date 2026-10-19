@@ -190,7 +190,7 @@
                     </Border>
                 </StackPanel>
 
-                <!-- 2.4G 设备插件 -->
+                <!-- 2.4G 设备插件（品牌级：只列品牌，具体型号由扫描识别） -->
                 <StackPanel Spacing="8">
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="2,0,0,0">
                         <Border Width="3" Height="14" CornerRadius="1.5" VerticalAlignment="Center"
@@ -203,7 +203,7 @@
                             <StackPanel x:Name="PluginPanel" />
                             <Border Style="{StaticResource RowDividerStyle}" />
                             <TextBlock Margin="0,12,0,6" Style="{StaticResource RowDescStyle}"
-                                       Text="2.4G 协议按品牌适配。开启插件即授权它发送工作所需的帧（没有独立的「写入许可」开关）；会写帧的插件默认关闭。识别不到设备时，可查看日志 %LOCALAPPDATA%\VigilWatt\logs（按日 app-日期.log）" />
+                                       Text="2.4G 协议按品牌适配，一个品牌一行开关；具体型号由扫描自动识别，不需要在这里选。开启某个品牌即授权它发送工作所需的帧（没有独立的「写入许可」开关），会写帧的品牌默认关闭。识别不到设备时，可查看日志 %LOCALAPPDATA%\VigilWatt\logs（按日 app-日期.log）" />
                         </StackPanel>
                     </Border>
                 </StackPanel>

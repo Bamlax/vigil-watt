@@ -17,6 +17,7 @@ public sealed class MchosePlugin : BatteryPluginBase
 
     public override string Name => SettingsKey;
     public override string DisplayName => "迈从";
+    public override string DisplayNameEn => "MCHOSE";
     /// <summary>一个插件同时管键盘与鼠标（罗技先例）：声明 Unknown，具体图标由 <see cref="ResolveKind"/> 按协议给。</summary>
     public override DeviceKind Kind => DeviceKind.Unknown;
 

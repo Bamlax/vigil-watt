@@ -15,7 +15,8 @@ public sealed class DeluxPlugin : BatteryPluginBase
     public const ushort M900ProPid = 0xFA65;
 
     public override string Name => "Delux";
-    public override string DisplayName => "DELUX";
+    public override string DisplayName => "多彩";
+    public override string DisplayNameEn => "DELUX";
     public override DeviceKind Kind => DeviceKind.Mouse;
 
     /// <summary>纯被动零写入，允许 15 秒发现节拍；鼠标睡前也能在下一拍重试。</summary>

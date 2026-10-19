@@ -15,6 +15,9 @@ public interface IBatteryPlugin
 
     string DisplayName { get; }
 
+    /// <summary>品牌英文名。设置页把它当副标题，<see cref="DisplayName"/> 是中文主标题——两行都要有，别只留一种。</summary>
+    string DisplayNameEn { get; }
+
     /// <summary>本插件处理的设备类型（UI 选图标用）。拿不准就 Unknown，UI 会退回按名字猜。</summary>
     DeviceKind Kind { get; }
 

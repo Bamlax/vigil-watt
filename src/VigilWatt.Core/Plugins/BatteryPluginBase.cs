@@ -14,6 +14,7 @@ public abstract class BatteryPluginBase : IBatteryPlugin
 {
     public abstract string Name { get; }
     public abstract string DisplayName { get; }
+    public abstract string DisplayNameEn { get; }
 
     /// <summary>本插件处理的设备类型（UI 选图标用）。</summary>
     public abstract DeviceKind Kind { get; }

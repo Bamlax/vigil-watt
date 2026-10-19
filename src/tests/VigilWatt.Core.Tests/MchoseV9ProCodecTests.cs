@@ -107,6 +107,20 @@ public sealed class MchoseV9ProCodecTests
         => Assert.False(MchoseV9ProCodec.IsSupportedInterface(0x291D, 0x385D,
             Path, 0xFF90, 1, 64, 64, 0, null));
 
+    /// <summary>
+    /// 耳机判据不能抢同品牌键鼠的接口。V9 Pro 并入 `MchosePlugin` 后，三者共用一条探测链，
+    /// 一旦这里放宽就会把 0x11/0x06 或 0x13 帧发到耳机、或把 64 字节查询帧发到鼠标。
+    /// 样本取本机 G87 V1（41E4:2001，20 字节 0x13）与贡献者 A7 V2 Pro（3837:100A，65 字节）。
+    /// </summary>
+    [Theory]
+    [InlineData(0x41E4, 0x2001, "&mi_01&col01#", 0xFF02, 0x0002, 20, 20, 0, 0x13)]
+    [InlineData(0x3837, 0x100A, "&mi_02&col03#", 0xFF00, 0x0002, 65, 65, 0, 0x11)]
+    [InlineData(0x3837, 0x201B, "&mi_01&col01#", 0xFF02, 0x0002, 20, 20, 0, 0x13)]
+    public void KeyboardAndMouseInterfacesAreNotMistakenForHeadset(ushort vid, ushort pid, string segment,
+        ushort page, ushort usage, ushort input, ushort output, ushort feature, byte id)
+        => Assert.False(MchoseV9ProCodec.IsSupportedInterface(vid, pid,
+            Path.Replace("&mi_00&col05#", segment), page, usage, input, output, feature, id));
+
     private static byte[] Response()
     {
         var response = new byte[64];

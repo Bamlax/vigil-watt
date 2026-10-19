@@ -128,6 +128,14 @@ public class AppSettings
                 foreach (var (name, on) in defaults.PluginEnabled)
                     _cached.PluginEnabled.TryAdd(name, on);
 
+            // 反向清理：插件被删掉后遗留的键（如已删除的 Elan 插件）留在配置里只会误导人以为它还在。
+            // 默认表就是"当前存在的插件"的唯一清单，不在这张表里的键一律丢弃；下次保存时从 settings.json 消失。
+            // 对降级场景无害：老版本会按自己的默认表重新补键。
+            if (_cached.PluginEnabled != null)
+                foreach (var stale in _cached.PluginEnabled.Keys
+                             .Where(k => !defaults.PluginEnabled.ContainsKey(k)).ToList())
+                    _cached.PluginEnabled.Remove(stale);
+
             return _cached;
         }
     }

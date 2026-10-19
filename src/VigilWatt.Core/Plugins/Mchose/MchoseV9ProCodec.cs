@@ -3,7 +3,7 @@ namespace VigilWatt.Core.Plugins.Mchose;
 /// <summary>
 /// 功 能： V9 Pro 耳机固定电量查询的报文构造与解析。
 /// 2026/10/19 20:45:00 xliu
-/// 协议与验证范围见 docs/hardware/protocols.md §12。
+/// 协议与验证范围见 docs/hardware/mchose-v9-pro.md。
 /// </summary>
 public static class MchoseV9ProCodec
 {
@@ -54,7 +54,7 @@ public static class MchoseV9ProCodec
             return false;
 
         // 有的接收器会把主机写入回显到输入队列：我们自己的查询帧（55 65 01 …）正好能解析成 1%。
-        // 整帧等于查询帧时丢弃。代价是"真 1% 且标志字节恰好为 0"的响应也会被丢，已记入 §12.5。
+        // 整帧等于查询帧时丢弃。代价是"真 1% 且标志字节恰好为 0"的响应也会被丢，见 mchose-v9-pro.md §5。
         if (report.SequenceEqual(Query)) return false;
 
         percent = report[2];

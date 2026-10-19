@@ -60,6 +60,7 @@ The table distinguishes devices verified on hardware from protocols implemented 
 |---|---|
 | MCHOSE G87 · 2.4 GHz `0x13` | Verified on the developer's device |
 | New-generation MCHOSE dongles · QHW (e.g. `3837:3033`) | Implemented; awaiting matching hardware validation |
+| MCHOSE G87 V2 / A7 V2 Pro · mouse V2 passive frames | Implemented, off by default; contributor hardware only, only G87 V1 retested here |
 | Betop T9 · passive vendor-interface stream | Verified on hardware |
 | Logitech Bolt receiver (C548 + MX Master 3S) · HID++ | Verified on hardware |
 | Rapoo VT3 Gen 2 · passive `status-report7` | Verified on the developer's device |
@@ -68,8 +69,12 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | AULA F99 Pro · `0x13` session/push | Implemented, off by default; contributor hardware only |
 | DELUX M900 Pro · passive 5-byte status | Implemented, off by default; same VID/PID as Inphic, receiver not seen here |
 | DualSense · passive Bluetooth HID | Implemented, on by default; contributor hardware only |
+| GANSS GS3104T-Pro · 33-byte query frame | Implemented, off by default; writes frames. Contributor hardware only |
+| MCHOSE V9 Pro headset · 64-byte query frame | Implemented, off by default; writes frames, shares the MCHOSE switch. Contributor hardware only |
 | Classic Bluetooth · HFP gateway device-node property | EDIFIER W820NB verified |
 | System battery · `GetSystemPowerStatus` | Implemented; can be enabled optionally |
+
+Adapters marked "contributor hardware only" come from community captures and on-device verification. See **[CONTRIBUTORS.md](CONTRIBUTORS.md)** for who contributed what.
 
 The 弱水时砂炽天使 2.4 GHz device (`38FF:0001`) has no battery reporting channel, confirmed through host-side inspection and RoseLink analysis. Other models depend on whether their protocols have been implemented.
 

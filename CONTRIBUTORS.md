@@ -1,0 +1,20 @@
+# 贡献者
+
+VigilWatt 的设备适配大多来自社区：有人提供抓包样本，有人把协议写成插件，有人报出"这台设备读不到电量"的现象。这份名单按人记录做了什么。
+
+> 每个 PR 具体收了什么、**没**收到什么、是否本机复测，记在 [docs/project/contributions.md](docs/project/contributions.md)。本文只回答"谁做了什么"。
+
+| 贡献者 | 贡献内容 | 关联 |
+|---|---|---|
+| **dotisland** | HECATE G5M Pro 只读电量插件（`35BB:D00B` 被动 report `0x04`）；拔出设备后把离线状态交回设备列表 | [PR #13](https://github.com/evren-oct/vigil-watt/pull/13) |
+| **Baron77777** | AULA F99 Pro（`3554:FA09`，`0x13` 会话/推送）与 DELUX M900 Pro（`1D57:FA65`，被动 5 字节状态帧）两个插件 | [PR #16](https://github.com/evren-oct/vigil-watt/pull/16) |
+| **luze258** | 三台设备：DualSense 蓝牙电量（report `0x31` + CRC）、GANSS GS3104T-Pro（33 字节查询帧）、MCHOSE V9 Pro 耳机（64 字节查询帧）；以及 GANSS 认领判据的风险分析 | [PR #15](https://github.com/evren-oct/vigil-watt/pull/15) |
+| **zi-ha** | 迈从鼠标 V2（A7 V2 Pro `3837:100A`）与 G87 V2（`3837:201B`）支持；按协议区分键鼠图标的 `ResolveKind`；用官方密码表识别型号 | [PR #17](https://github.com/evren-oct/vigil-watt/pull/17) |
+
+## 还能怎么帮
+
+- **有设备**：抓一次官方软件的包（手法见 [debugging.md](docs/hardware/debugging.md) §1），或按协议文档里的验证清单复测。GANSS 与 V9 Pro 目前都只有贡献者一台机器的样本，还缺第二台设备的数据（`docs/reviews/BACKLOG.md` CR-66 / CR-67）。
+- **写代码**：新设备按 [AGENTS.md](AGENTS.md) 的规则接入——插件继承 `BatteryPluginBase`、会写帧的默认关闭、只发有出处的帧。
+- **报问题**：设备读不到、读数跳动、离线误判，带上型号、VID/PID 和日志（`%LOCALAPPDATA%\VigilWatt\logs`）。现象描述清楚的 issue 与代码贡献一样有价值。
+
+> 只做兼容性适配、不涉及厂商代码复用的贡献同样计入。每个协议的来源与许可边界见 [docs/hardware/sources.md](docs/hardware/sources.md)。

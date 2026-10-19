@@ -1,0 +1,52 @@
+using VigilWatt.Core.Plugins.Mchose;
+using Xunit;
+
+namespace VigilWatt.Core.Tests;
+
+/// <summary>
+/// 功 能： 迈从家族接口分流的回归测试（键盘 / 鼠标 / 耳机三条链路不能互相抢）。
+/// 2026/10/19 21:10:00 xliu
+/// 指纹来源见 docs/hardware/protocols.md §1、§1.6、§12。
+/// </summary>
+public sealed class MchoseInterfaceClassifierTests
+{
+    private const string HeadsetPath = @"\\?\hid#vid_291d&pid_385d&mi_00&col05#test";
+
+    [Theory]
+    // 耳机：完整判据命中
+    [InlineData(0x291D, 0x385D, HeadsetPath, 0xFF90, 0x0001, 64, 64, 0, 0x55, MchoseInterfaceKind.HeadsetV9)]
+    // 耳机同 VID/PID 但换了 collection：不认，也不能掉进键鼠分支
+    [InlineData(0x291D, 0x385D, @"\\?\hid#vid_291d&pid_385d&mi_00&col01#test", 0xFF90, 0x0001, 64, 64, 0, 0x55, MchoseInterfaceKind.None)]
+    // 耳机同 VID/PID 但长度是键盘的 20：仍不认（VID 不在键鼠白名单里）
+    [InlineData(0x291D, 0x385D, HeadsetPath, 0xFF02, 0x0002, 20, 20, 0, 0x13, MchoseInterfaceKind.None)]
+    // 键盘：本机 G87 V1（41E4:2001）
+    [InlineData(0x41E4, 0x2001, @"\\?\hid#vid_41e4&pid_2001&mi_01&col01#test", 0xFF02, 0x0002, 20, 20, 0, 0x13, MchoseInterfaceKind.KeyboardV1)]
+    // 键盘：G87 V2 接收器（3837:201B）
+    [InlineData(0x3837, 0x201B, @"\\?\hid#vid_3837&pid_201b&mi_01&col01#test", 0xFF02, 0x0002, 20, 20, 0, 0x13, MchoseInterfaceKind.KeyboardV1)]
+    // 鼠标：A7 V2 Pro 接收器（3837:100A，65 字节含 report ID）
+    [InlineData(0x3837, 0x100A, @"\\?\hid#vid_3837&pid_100a&mi_02&col03#test", 0xFF00, 0x0002, 65, 65, 0, 0x11, MchoseInterfaceKind.MouseV2)]
+    // 鼠标：QHW 世代 dongle（3837:3033）
+    [InlineData(0x3837, 0x3033, @"\\?\hid#vid_3837&pid_3033&mi_01&col01#test", 0xFF00, 0x0002, 64, 64, 0, 0x4D, MchoseInterfaceKind.MouseV2)]
+    // 标准键盘用法：即使 VID 是迈从也不是配置通道
+    [InlineData(0x3837, 0x201B, @"\\?\hid#vid_3837&pid_201b&mi_00&col01#test", 0x0001, 0x0006, 20, 20, 0, 0x00, MchoseInterfaceKind.None)]
+    // 别家 VID：罗技（046D）、雷柏（24AE）、AULA（3554）都不能进迈从链路
+    [InlineData(0x046D, 0xC548, @"\\?\hid#vid_046d&pid_c548&mi_01&col01#test", 0xFF00, 0x0001, 20, 20, 0, 0x11, MchoseInterfaceKind.None)]
+    [InlineData(0x24AE, 0x1412, @"\\?\hid#vid_24ae&pid_1412&mi_01&col01#test", 0xFF00, 0x0002, 19, 19, 0, 0x07, MchoseInterfaceKind.None)]
+    [InlineData(0x3554, 0xFA09, @"\\?\hid#vid_3554&pid_fa09&mi_01&col01#test", 0xFF02, 0x0002, 20, 20, 0, 0x13, MchoseInterfaceKind.None)]
+    // 长度既不是 20 也不到 60：不认
+    [InlineData(0x3837, 0x201B, @"\\?\hid#vid_3837&pid_201b&mi_01&col01#test", 0xFF00, 0x0002, 32, 32, 0, 0x13, MchoseInterfaceKind.None)]
+    public void ClassifyRoutesEachLinkToItsOwnKind(ushort vid, ushort pid, string path,
+        ushort page, ushort usage, ushort input, ushort output, ushort feature, int id,
+        MchoseInterfaceKind expected)
+        => Assert.Equal(expected, MchoseInterfaceClassifier.Classify(vid, pid, path,
+            page, usage, input, output, feature, (byte)id));
+
+    /// <summary>耳机判据要求 feature 长度为 0、reportId 为 0x55，任一条不满足就不能落到耳机链路。</summary>
+    [Theory]
+    [InlineData(1, 0x55)]
+    [InlineData(0, 0x00)]
+    [InlineData(0, 0x13)]
+    public void HeadsetRequiresFeatureLengthZeroAndReportId55(ushort feature, byte id)
+        => Assert.Equal(MchoseInterfaceKind.None, MchoseInterfaceClassifier.Classify(
+            0x291D, 0x385D, HeadsetPath, 0xFF90, 0x0001, 64, 64, feature, id));
+}

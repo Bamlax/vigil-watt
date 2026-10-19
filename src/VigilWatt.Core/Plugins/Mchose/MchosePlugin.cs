@@ -21,12 +21,6 @@ public sealed class MchosePlugin : BatteryPluginBase
     /// <summary>一个插件同时管键盘与鼠标（罗技先例）：声明 Unknown，具体图标由 <see cref="ResolveKind"/> 按协议给。</summary>
     public override DeviceKind Kind => DeviceKind.Unknown;
 
-    /// <summary>新世代厂 ID（G87 V2 接收器 3837:201B、A7 V2 Pro 接收器 3837:100A），见 docs/hardware/protocols.md §1.6。</summary>
-    public const ushort MchoseVid = 0x3837;
-
-    /// <summary>老款 G87 世代（41E4:2001），协议同为 V1 会话。</summary>
-    public const ushort MchoseLegacyVid = 0x41E4;
-
     /// <summary>键盘 V1 会话协议（report 0x13）。</summary>
     private const string ProtocolKeyboardV1 = "keyboard-v1";
 
@@ -88,22 +82,15 @@ public sealed class MchosePlugin : BatteryPluginBase
         if (info.VendorId == Hecate.HecatePlugin.HecateVid) return false;
         // AULA F99 Pro 也是 20 字节 0x13 接口，会话帧只能由 AulaPlugin 在开关打开后发送
         if (info.VendorId == Aula.AulaPlugin.AulaVid) return false;
-        // V9 Pro 耳机接收器是另一个 VID（291D:385D），判据与键鼠完全独立，先分流再走下面的白名单
-        if (info.VendorId == MchoseV9ProCodec.VendorId && info.ProductId == MchoseV9ProCodec.ProductId)
-            return MchoseV9ProCodec.IsSupportedInterface(info.VendorId, info.ProductId, info.DevicePath,
-                info.UsagePage, info.Usage, info.InputReportLength, info.OutputReportLength,
-                info.FeatureReportLength, info.OutputReportId);
-
-        // 上面的品牌排除已被 VID 白名单覆盖，留着当纵深防御：认错厂 = 往别家硬件发帧
-        if (info.VendorId != MchoseVid && info.VendorId != MchoseLegacyVid) return false;
-        // consumer/system/标准键盘接口即使产品名含 MCHOSE 也不是配置通道，必须是厂商用法 + 可用 I/O
-        bool vendor = info.UsagePage >= 0xFF00 || info.Usage >= 0xFF00;
-        if (!vendor) return false;
-        if (info.OutputReportLength == 20 && info.InputReportLength == 20) return true; // V1 键盘 0x13 通道
-        // 鼠标接收器厂商接口 65 = 64 数据 + 1 report ID；V2 世代长度差异大，按 ≥60 收口
-        if (info.OutputReportLength >= 60 && info.InputReportLength >= 60) return true;
-        return false;
+        // 品牌排除之后，判据全在分类器里（耳机先分流、键鼠白名单、厂商用法、报告长度），有单测覆盖
+        return Classify(info) != MchoseInterfaceKind.None;
     }
+
+    /// <summary>把 <see cref="HidDeviceInfo"/> 摊成分类器要的字段，避免判据在两处各写一遍。</summary>
+    private static MchoseInterfaceKind Classify(HidDeviceInfo info)
+        => MchoseInterfaceClassifier.Classify(info.VendorId, info.ProductId, info.DevicePath,
+            info.UsagePage, info.Usage, info.InputReportLength, info.OutputReportLength,
+            info.FeatureReportLength, info.OutputReportId);
 
     protected override DeviceKind ResolveKind(string protocol)
         => protocol switch
@@ -159,12 +146,13 @@ public sealed class MchosePlugin : BatteryPluginBase
         if (handle.Info.OutputReportLength < 20 || handle.Info.InputReportLength < 20) return null;
 
         var path = handle.Info.DevicePath;
+        var kind = MchoseInterfaceClassifier.Classify(handle.Info.VendorId, handle.Info.ProductId, path,
+            handle.Info.UsagePage, handle.Info.Usage, handle.Info.InputReportLength,
+            handle.Info.OutputReportLength, handle.Info.FeatureReportLength, handle.Info.OutputReportId);
 
-        // V9 Pro 耳机必须在下面「≥60 字节只走鼠标」之前分流：它的输出同样是 64 字节，
+        // 耳机必须排在下面「≥60 字节只走鼠标」之前：它的输出同样是 64 字节，
         // 落到鼠标分支会往耳机发 0x11/0x06 触发帧。判据是完整接口匹配，抢不走键盘/鼠标的通道。
-        if (MchoseV9ProCodec.IsSupportedInterface(handle.Info.VendorId, handle.Info.ProductId, path,
-                handle.Info.UsagePage, handle.Info.Usage, handle.Info.InputReportLength,
-                handle.Info.OutputReportLength, handle.Info.FeatureReportLength, handle.Info.OutputReportId))
+        if (kind == MchoseInterfaceKind.HeadsetV9)
         {
             var headset = TryHeadsetV9(handle);
             if (headset != null) KnownProtocolByPath[path] = ProtocolHeadsetV9;
@@ -172,7 +160,7 @@ public sealed class MchosePlugin : BatteryPluginBase
         }
 
         // ≥60 的接口只可能是鼠标接收器：它不是 0x13 会话通道，在这条通道上发键盘帧没有意义
-        if (handle.Info.OutputReportLength >= 60)
+        if (kind == MchoseInterfaceKind.MouseV2)
         {
             var mouse = TryMouseV2(handle);
             if (mouse != null) KnownProtocolByPath[path] = ProtocolMouseV2;

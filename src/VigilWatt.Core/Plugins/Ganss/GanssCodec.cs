@@ -3,7 +3,7 @@ namespace VigilWatt.Core.Plugins.Ganss;
 /// <summary>
 /// 功 能： GS3104T-Pro 已验证电量报文的构造与解析。
 /// 2026/10/19 19:45:00 xliu
-/// 协议与验证范围见 docs/hardware/protocols.md §11。
+/// 协议与验证范围见 docs/hardware/ganss.md。
 /// </summary>
 public static class GanssCodec
 {

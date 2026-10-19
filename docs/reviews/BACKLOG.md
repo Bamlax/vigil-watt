@@ -12,7 +12,7 @@
 | **CR-60** | 贴片右键菜单的 owner 是任务栏子窗口，弹出和关闭未真机看 | `TaskbarPillWindow.cs:OnRightClick` | `open` |
 | **CR-63** | 贴片与 explorer 输入队列串在一起，UI 线程长阻塞可能冻住任务栏。未实测 | `TaskbarPillWindow.cs` | `open` |
 | **CR-13** | 两个蓝牙 watcher 的发现循环和快照仍然重复。`ReadConnected` 已抽到 `WatcherProps` | `Ble/BleBatteryWatcher.cs`、`Ble/BluetoothClassicWatcher.cs` | `open` |
-| **CR-16** | 多个文件超过 400 行。拆分见下面的 D 项，不要先按行数硬拆 | `WidgetWindow.xaml.cs`、`LogitechPlugin.cs`、`BatteryPluginBase.cs`、`MchosePlugin.cs`、`DeviceManager.cs`、`BatteryChartControl.xaml.cs` | `open` |
+| **CR-16** | 多个文件超过 400 行。拆分见下面的 D 项，不要先按行数硬拆。`MchosePlugin` 并入 V9 Pro 后已 766 行（四套协议），拆分建议等 D6 落地或有了第二台迈从设备再动——现在拆只能靠读代码验证 | `WidgetWindow.xaml.cs`、`LogitechPlugin.cs`、`BatteryPluginBase.cs`、`MchosePlugin.cs`、`DeviceManager.cs`、`BatteryChartControl.xaml.cs` | `open` |
 | **CR-35** | 罗技打开成功后清了 `Io`，没清 `OpenFailed`。当前无实际后果 | `LogitechPlugin.cs:AttachCore` | `open` |
 | **CR-36** | `TryEnqueue` 失败时 `_refreshQueued` 不会复位。窗口关掉后不再收请求，当前无实际后果 | `WidgetWindow.xaml.cs:RequestRefresh`、`DevicesPage.xaml.cs:RequestRefresh` | `open` |
 | **CR-39** | 贴片默认贴在托盘左边，左键被拖动吃掉，可能盖住任务栏按钮 | `TaskbarPillWindow.cs:OnLButtonDown`、`TaskbarLayout.cs:Place` | `open` |
@@ -22,8 +22,13 @@
 | **CR-50** | 日志跨午夜换文件没有单测。要测得注入时钟 | `Utils/Log.cs:EnsureWriter` | `open` |
 | **CR-52** | `ShutdownLogging` 的注释仍说没人调用 `Dispose`，实际退出路径会调 | `App.xaml.cs:ShutdownLogging` | `open` |
 | **CR-61** | 日志在锁里同步刷盘，UI 线程可能等磁盘。改缓冲会丢掉崩溃前最后几行，所以先不改 | `Utils/Log.cs:Emit` | `open` |
-| **CR-66** | GANSS 认领把 `&mi_03#` 当硬条件，但 VID/PID 是借用号、usage 是 VIA 标准页；换固件会静默认领失败，同号 VIA 键盘可能被误认领并写帧。已加产品名兜底，仍需有设备的人确认实际产品名并抓包，清单见 `hardware/protocols.md` §11.6.1 | `Plugins/Ganss/GanssCodec.cs:IsSupportedInterface` | `open` |
-| **CR-67** | V9 Pro 只在一个电量点（100%）验证过：非满电是否线性、`[3]` 是否充电标志、低电量有无占位帧都不知道；接收器是否回显主机写入也未确认（已加"整帧等于查询帧即丢弃"的兜底）。需有设备的人补样本，清单见 `hardware/protocols.md` §12.5 | `Plugins/Mchose/MchoseV9ProCodec.cs:TryParse` | `open` |
+| **CR-66** | GANSS 认领把 `&mi_03#` 当硬条件，但 VID/PID 是借用号、usage 是 VIA 标准页；换固件会静默认领失败，同号 VIA 键盘可能被误认领并写帧。已加产品名兜底，仍需有设备的人确认实际产品名并抓包，清单见 `hardware/ganss.md` §6.1 | `Plugins/Ganss/GanssCodec.cs:IsSupportedInterface` | `open` |
+| **CR-67** | V9 Pro 只在一个电量点（100%）验证过：非满电是否线性、`[3]` 是否充电标志、低电量有无占位帧都不知道；接收器是否回显主机写入也未确认（已加"整帧等于查询帧即丢弃"的兜底）。需有设备的人补样本，清单见 `hardware/mchose-v9-pro.md` §5 | `Plugins/Mchose/MchoseV9ProCodec.cs:TryParse` | `open` |
+| **CR-68** | 社区 PR #14（双通道去重）未纳入：与 #16 的同源合并语义重叠，要先定一套规则；且 `Devices` getter 里改 `Kind` 有副作用，`NormalizeName` 只 Trim 未忽略大小写（注释与实现不符）。合并前这两个点要先修 | PR #14 | `open` |
+| **CR-69** | 社区 PR #16（设备管理）未纳入：删离线条目会连带删历史（虽先 `VACUUM INTO` 备份），"只显示在线""电量条对齐"边界未定。冲突面在文档 + `BatteryPluginBase` + `AppSettings` | PR #16 提交 `6908997f` | `open` |
+| **CR-70** | 社区 PR #15 的 BLE 大改未纳入（`BleBatteryWatcher` +38/-22、`WatcherProps`、`DeviceKindGuesser`、`DeviceSourceInfo`、`SettingsPage`）。通用 GATT 路径已能读标准电池服务，故本轮只摘设备插件；蓝牙通道要单独一轮 | PR #15 | `open` |
+| **CR-71** | 社区 issue #12（任务栏贴片避让托盘图标）只有根因与修法描述，没有代码。`TaskbarLayout.Place` 现在固定贴托盘左侧，与 CR-39 同源 | issue #12、`Services/TaskbarLayout.cs:Place` | `open` |
+| **CR-72** | 社区 issue #11 现象 2（断电后死锁）未处理：涉及基类读实现，风险高于收益，需单独排期并配复现手段 | issue #11 | `open` |
 
 ## 重构候选（未做）
 

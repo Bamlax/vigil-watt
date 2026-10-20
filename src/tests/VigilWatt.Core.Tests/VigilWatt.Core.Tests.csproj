@@ -60,6 +60,9 @@
     <Compile Include="..\..\VigilWatt.Core\Models\ChargingStateMap.cs" />
     <Compile Include="..\..\VigilWatt.Core\Devices\DeviceStatusMerger.cs" />
     <Compile Include="..\..\VigilWatt.Core\Devices\DeviceChangeDetector.cs" />
+    <!-- 删除设备后的"该不该收这条上报"判定：黑名单/删除标记四种组合，写错就是删了又复活 -->
+    <Compile Include="..\..\VigilWatt.Core\Devices\DeviceRemoval.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Settings\BlockedDevice.cs" />
     <Compile Include="..\..\VigilWatt.Core\Devices\RemainingTimeEstimator.cs" />
     <Compile Include="..\..\VigilWatt.Core\Power\SystemPowerReader.cs" />
     <Compile Include="..\..\VigilWatt.Core\Power\SystemBatteryWatcher.cs" />

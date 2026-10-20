@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Linq;
 using VigilWatt.App.Services;
 using VigilWatt.Core.Plugins;
+using VigilWatt.Core.Settings;
 using VigilWatt.Core.Utils;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
@@ -509,9 +510,25 @@ public sealed partial class SettingsPage : Page
         {
             s.PluginEnabled[name] = toggle.IsOn;
         }
-        s.Save();
+        // 保存失败必须让用户看见：以前这里把返回值丢掉，界面毫无反馈，用户以为"点了没反应"。
+        // 写不进去时（目录不可写 / 磁盘满 / 安全软件拦截）继续往下走只会让内存与磁盘不一致，直接停。
+        if (!s.Save())
+        {
+            Native.MessageBoxW(
+                IntPtr.Zero,
+                $"设置保存失败，无法写入：\r\n{AppPaths.RootDir}\\settings.json\r\n\r\n" +
+                $"错误：{AppSettings.LastSaveError}\r\n\r\n" +
+                "常见原因：目录不可写、磁盘空间不足、或被安全软件拦截。\r\n本次修改不会保留。",
+                "VigilWatt 保存失败",
+                0x00000010 /* MB_ICONERROR */);
+            return;
+        }
 
-        AutostartService.SetEnabled(AutostartToggle.IsOn);
+        // 自启写失败不拦其他设置（注册表被拒 ≠ 设置无效），但必须说出来：否则用户以为设上了，
+        // 下次开机才发现没起来。异常在这里就地收口，不能再逸出到熔断器（dev/runtime-pitfalls.md §20）。
+        var autostartError = AutostartService.TrySetEnabled(AutostartToggle.IsOn, out var autostartReason)
+            ? null
+            : autostartReason;
         App.Services.Manager.ApplySettings();
 
         // 小组件开关即时生效
@@ -554,7 +571,23 @@ public sealed partial class SettingsPage : Page
         App.Services.Manager.CleanupHistoryNow();
 
         // 日志级别不热更新（重启生效），保存后给一句提示，避免用户以为"点了没反应"
-        ShowSavedFeedback(s.LogLevel == LogLevelNames.Default ? "已保存" : "已保存（日志级别重启后生效）");
+        var feedback = autostartError == null
+            ? s.LogLevel == LogLevelNames.Default ? "已保存" : "已保存（日志级别重启后生效）"
+            : "已保存（开机自启未生效）";
+        ShowSavedFeedback(feedback);
+
+        if (autostartError != null)
+        {
+            Native.MessageBoxW(
+                IntPtr.Zero,
+                "其他设置已保存，但开机自启没能写入注册表，本次不会生效。\r\n\r\n" +
+                $"错误：{autostartError}\r\n\r\n" +
+                "常见原因：进程跑在受限权限下（沙箱 / 安全软件 / 非当前用户配置），" +
+                "此时 HKEY_CURRENT_USER 的 Run 键是只读的。\r\n" +
+                "可以从资源管理器直接双击 VigilWatt.App.exe 再试一次。",
+                "VigilWatt 开机自启未生效",
+                0x00000030 /* MB_ICONWARNING */);
+        }
     }
 
     private void OpenLogDir_Click(object sender, RoutedEventArgs e)

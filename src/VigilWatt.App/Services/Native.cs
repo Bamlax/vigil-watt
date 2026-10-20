@@ -97,6 +97,10 @@ internal static class Native
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern bool Shell_NotifyIconW(uint message, ref NOTIFYICONDATAW data);
 
+    /// <summary>启动失败时的最后一道可见反馈：此刻 XAML 可能还没就绪，只能用原生弹窗。</summary>
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern int MessageBoxW(IntPtr hwnd, string text, string caption, uint type);
+
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     public static extern ushort RegisterClassW(ref WNDCLASSW wndClass);
 

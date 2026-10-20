@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using VigilWatt.Core.Devices;
 using VigilWatt.Core.Hid;
 using VigilWatt.Core.Models;
 using VigilWatt.Core.Settings;
@@ -210,12 +211,20 @@ public sealed class LogitechPlugin : IBatteryPlugin
         bool initial = !session.InitialScanDone;
         int probesThisPass = 0;
 
+        // 永久移除的设备：不再 ping 它的槽位，已跟踪的也一并丢掉
+        foreach (var idx in session.Devices.Keys.Where(k => DeviceBlocklist.IsBlocked(SlotId(session, k))).ToList())
+        {
+            session.Devices.Remove(idx);
+            Log.Info($"罗技设备已永久移除，停止轮询 devIdx={idx}");
+        }
+
         if (!session.DirectDevice)
         {
             int maxSlots = HidppCatalog.MaxSlots(session.Info.ProductId);
             for (byte idx = 1; idx <= maxSlots; idx++)
             {
                 if (session.Devices.ContainsKey(idx)) continue;
+                if (DeviceBlocklist.IsBlocked(SlotId(session, idx))) continue;
 
                 if (!initial)
                 {
@@ -245,7 +254,7 @@ public sealed class LogitechPlugin : IBatteryPlugin
             bool allowDirect = initial
                 || !session.EmptySlotUntil.TryGetValue(0xFF, out var until)
                 || DateTimeOffset.Now >= until;
-            if (allowDirect && (initial || probesThisPass < 1))
+            if (allowDirect && (initial || probesThisPass < 1) && !DeviceBlocklist.IsBlocked(SlotId(session, 0xFF)))
             {
                 if (Ping(io, 0xFF, out var major, DiscoverTimeout))
                 {
@@ -271,6 +280,7 @@ public sealed class LogitechPlugin : IBatteryPlugin
         if (session.Devices.ContainsKey(idx)) return;
         int maxSlots = HidppCatalog.MaxSlots(session.Info.ProductId);
         if (idx > maxSlots) return;
+        if (DeviceBlocklist.IsBlocked(SlotId(session, idx))) return;
         session.EmptySlotUntil.Remove(idx);
         if (Ping(session.Io, idx, out var major, FastSlotTimeout))
             AddDevice(session, idx, major);
@@ -278,8 +288,14 @@ public sealed class LogitechPlugin : IBatteryPlugin
             session.EmptySlotUntil[idx] = DateTimeOffset.Now + EmptySlotCooldown;
     }
 
+    /// <summary>设备 ID：接收器路径哈希 + 槽位。认领、黑名单、上报三处必须同一套规则。</summary>
+    private static string SlotId(ReceiverSession session, byte idx)
+        => $"logitech:{PluginUtils.StableHash(session.Info.DevicePath)}:{idx}";
+
     private void AddDevice(ReceiverSession session, byte idx, byte protocolMajor)
     {
+        if (DeviceBlocklist.IsBlocked(SlotId(session, idx))) return;
+
         var io = session.Io!;
         string name = ReadDeviceName(io, idx) ?? $"罗技设备 {idx}";
         var kind = DeviceKind.Unknown;
@@ -294,7 +310,7 @@ public sealed class LogitechPlugin : IBatteryPlugin
 
         var status = new DeviceStatus
         {
-            Id = $"logitech:{PluginUtils.StableHash(session.Info.DevicePath)}:{idx}",
+            Id = SlotId(session, idx),
             Name = name,
             Source = DeviceSource.Hid24G,
             Kind = kind,

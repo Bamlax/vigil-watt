@@ -1,3 +1,4 @@
+using VigilWatt.Core.Devices;
 using VigilWatt.Core.Hid;
 using VigilWatt.Core.Models;
 using VigilWatt.Core.Settings;
@@ -87,6 +88,9 @@ public abstract class BatteryPluginBase : IBatteryPlugin
     protected static bool IsWritesEnabled(string pluginName) =>
         AppSettings.Load().PluginEnabled.TryGetValue(pluginName, out var on) && on;
 
+    /// <summary>设备 ID：插件名 + 设备路径哈希。认领、黑名单、上报三处必须同一套规则，故只此一处生成。</summary>
+    protected string IdFor(string devicePath) => $"{Name.ToLowerInvariant()}:{PluginUtils.StableHash(devicePath)}";
+
     /// <summary>
     /// <see cref="Probe"/> 是否会向设备写帧：写帧的插件（迈从会话帧 / 北通查询）保持默认 true，
     /// 零写入探测（雷柏、英菲克纯被动）置 false。这是**机制事实**声明，与用户开关无关。
@@ -168,6 +172,19 @@ public abstract class BatteryPluginBase : IBatteryPlugin
         foreach (var info in availableDevices)
         {
             if (!IsCandidate(info)) continue;
+
+            // 永久移除的设备：连句柄都不开、帧也不发。只挡 Upsert 的话，插件照样会写帧。
+            if (DeviceBlocklist.IsBlocked(IdFor(info.DevicePath)))
+            {
+                if (_devices.Remove(info.DevicePath, out var blocked))
+                {
+                    StopPassiveListen(blocked);
+                    blocked.Handle.Dispose();
+                    _claims.Release(info.DevicePath, Name);
+                    Log.Info($"{DisplayName} 设备已永久移除，释放接口: {info.DevicePath}");
+                }
+                continue;
+            }
 
             if (_devices.TryGetValue(info.DevicePath, out var known))
             {
@@ -264,7 +281,7 @@ public abstract class BatteryPluginBase : IBatteryPlugin
             var (protocol, percent, charging) = probe;
             var status = new DeviceStatus
             {
-                Id = $"{Name.ToLowerInvariant()}:{PluginUtils.StableHash(o.Info.DevicePath)}",
+                Id = IdFor(o.Info.DevicePath),
                 Name = BuildDisplayName(o.Info),
                 Source = Source,
                 Kind = ResolveKind(protocol),

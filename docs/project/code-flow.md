@@ -236,6 +236,23 @@ SafeSample（每 SampleIntervalMinutes 分钟）:
 
 解法：用历史库里**最近见过**的记录补一个离线条目（`TombstoneWindow` 内有历史、当前不在位），既让总数有意义，又不凭空造设备（有真实历史为凭）。**只在启动后跑一次**——进程中设备一旦被认领就常驻 `_devices`，不需要反复补。开关关着的系统电量（`sys:`）要跳过，别把它复活成离线占位。
 
+### 5.2 删除离线设备与两份名单（`DeviceManager.RemoveOfflineDevice`）
+
+删除 = 移除条目 + **删除该设备全部历史**（与历史页的"按设备删"共用 `DeleteDevices` + `Compact`）。只允许删离线外设：在线设备删了插件下一轮就报回来；`System` 设备归设置页开关管，不给删。
+
+两份名单语义不同，别合并：
+
+| 名单 | 写入时机 | 生效 | 解除 |
+|---|---|---|---|
+| `DismissedDevices`（删除标记，id → 时间戳） | 普通删除 | `Upsert` 丢弃该 id 的**离线**上报 | 设备重新上线（`IsOnline=true`）时自动清除 |
+| `BlockedDevices`（黑名单，id → 名称 + 时间） | 勾选「永久移除」 | `Upsert` 一律丢弃；插件认领前就跳过，不开句柄、不发帧 | 只能手动「解除屏蔽」 |
+
+**顺序：名单先落盘，再摘条目。** `Upsert` 是唯一汇入口、跑在插件线程上，反过来做会被插进空档把条目塞回去。`Save()` 返回 false 时撤销刚写的键并中止，条目与历史一个都不动。
+
+黑名单的执行点（缺一处就有漏洞）：`BatteryPluginBase.AttachAsync` 首遍跳过并释放已跟踪句柄、`LogitechPlugin.DiscoverDevices` 跳过槽位、两个蓝牙 watcher 的 `HandleDevice` 早退、`Upsert` 兜底、`RestoreOfflineTombstones` 跳过。
+
+**已知限制**：2.4G 的 Id 是 `插件名 + FNV1a(DevicePath)`，而 `DevicePath` 含 USB 端口实例路径——换口即换 Id，黑名单随之失效；BLE / 经典蓝牙按蓝牙地址生成，稳定。
+
 ## 6. 低电量提醒（DeviceManager.CheckLowBattery → App.AttachTray）
 
 条件：在线 && 电量 ≤ LowBatteryThreshold && 非充电/已充满。**按设备去重 + 自动复位**：`_lowBatteryNotified[Id]` 是一个布尔量，`TryAdd` 兼任"未提醒过"的判定（天然幂等），跨过阈值只弹一次。复位点有三类——① 电量回到阈值之上、或转为充电/已充满；② 提醒阈值被设为 ≤0（关掉提醒）；③ 设备条目被移除（`ExpireTombstones` / `ApplySystemBatterySetting` / `DropDevicesOf` 三处一并 `TryRemove`）。于是"充到 100% 再放电回 20%"会重新提醒，同一轮持续掉电却不会逐 1% 刷屏（CR-15/CR-23 修的正是旧实现"精确档位且永不复位"的两个反向 bug）。触发 → `LowBatteryDetected` 事件 → App 层 `DispatcherQueue.TryEnqueue` → `Tray.ShowLowBattery(device)`（Win32 NIF_INFO 气泡）。

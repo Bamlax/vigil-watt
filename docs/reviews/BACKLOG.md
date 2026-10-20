@@ -25,7 +25,7 @@
 | **CR-66** | GANSS 认领把 `&mi_03#` 当硬条件，但 VID/PID 是借用号、usage 是 VIA 标准页；换固件会静默认领失败，同号 VIA 键盘可能被误认领并写帧。已加产品名兜底，仍需有设备的人确认实际产品名并抓包，清单见 `hardware/ganss.md` §6.1 | `Plugins/Ganss/GanssCodec.cs:IsSupportedInterface` | `open` |
 | **CR-67** | V9 Pro 只在一个电量点（100%）验证过：非满电是否线性、`[3]` 是否充电标志、低电量有无占位帧都不知道；接收器是否回显主机写入也未确认（已加"整帧等于查询帧即丢弃"的兜底）。需有设备的人补样本，清单见 `hardware/mchose-v9-pro.md` §5 | `Plugins/Mchose/MchoseV9ProCodec.cs:TryParse` | `open` |
 | **CR-68** | 社区 PR #14（双通道去重）未纳入：与 #16 的同源合并语义重叠，要先定一套规则；且 `Devices` getter 里改 `Kind` 有副作用，`NormalizeName` 只 Trim 未忽略大小写（注释与实现不符）。合并前这两个点要先修 | PR #14 | `open` |
-| **CR-69** | 社区 PR #16（设备管理）未纳入：删离线条目会连带删历史（虽先 `VACUUM INTO` 备份），"只显示在线""电量条对齐"边界未定。冲突面在文档 + `BatteryPluginBase` + `AppSettings` | PR #16 提交 `6908997f` | `open` |
+| **CR-69** | 社区 PR #16（设备管理）未纳入。**删除离线设备已按本项目方案落地**（2026-10-20：删除默认连带清历史 + 永久移除黑名单，见 `code-flow.md` §5.2），PR 里剩「只显示在线」「电量条对齐」仍不做 | PR #16 提交 `6908997f` | `open` |
 | **CR-70** | 社区 PR #15 的 BLE 大改未纳入（`BleBatteryWatcher` +38/-22、`WatcherProps`、`DeviceKindGuesser`、`DeviceSourceInfo`、`SettingsPage`）。通用 GATT 路径已能读标准电池服务，故本轮只摘设备插件；蓝牙通道要单独一轮 | PR #15 | `open` |
 | **CR-71** | 社区 issue #12（任务栏贴片避让托盘图标）只有根因与修法描述，没有代码。`TaskbarLayout.Place` 现在固定贴托盘左侧，与 CR-39 同源 | issue #12、`Services/TaskbarLayout.cs:Place` | `open` |
 | **CR-72** | 社区 issue #11 现象 2（断电后死锁）未处理：涉及基类读实现，风险高于收益，需单独排期并配复现手段 | issue #11 | `open` |

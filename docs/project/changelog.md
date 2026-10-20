@@ -5,6 +5,12 @@
 
 ## 2026-10-20
 
+- **启动默认显示主界面**：`AppSettings.StartMinimized` 默认值由 `true` 改为 `false`。之前双击后直接缩到托盘，看不到窗口，很容易被当成"没启动起来"。设置页的「启动时最小化」开关仍在，需要托盘常驻的自己打开。注意 `AutostartService` 写注册表时带 `--minimized` 参数，但应用从不读它（只记日志）——所以自启现在也会显示窗口。
+- **开发版数据目录改为 exe 旁边的 `data\`**：`AppPaths.ResolveRootDir()` 用 `#if DEBUG` 分流——Debug 取 `AppContext.BaseDirectory\data`，Release 才取 `%LOCALAPPDATA%\VigilWatt`。这样从 `bin` 双击就能跑，不往用户目录写东西，开发版与正式版的 settings/history/logs 天然隔离。`VIGILWATT_DATA_DIR` 仍可显式覆盖（优先级最高，非法路径自动退回）。`run-app.ps1` 简化为"结束实例 + 启动"，`-Copy` 作为环境受限时的兜底。单实例互斥量仍是全局同名，两边同时只能跑一个（避免抢 HID）。见 `dev/build.md` §3.1。
+- **补上"写盘失败"的盲区 + 新增 `scripts/run-app.ps1`**：`Log` 打开日志失败时会把所有行静默丢弃，用户只看到"一行日志都没有"。新增 `Log.TryProbeWriter`，启动时试开当天日志，失败就弹窗报出路径与真实异常。**根因已验证：从工作区目录启动的 exe 拿不到 `%LOCALAPPDATA%` 写权限**（该目录 ACL 里有沙箱组 `CodexSandboxUsers`），复制到工作区之外即正常；`run-app.ps1` 把这个复制+启动固化成一条命令。定位完成后一次性探针已删除，只留 `TryProbeWriter` / `LastSaveError` / `StartupGuard` 三处。见 `dev/runtime-pitfalls.md` §20。
+- **设置页保存失败不再无声**：`Save_Click` 以前把 `AppSettings.Save()` 的返回值直接丢掉，写盘失败时界面毫无反馈，用户以为"点了没反应"（实测在受限环境下必现）。现在失败会弹原生窗说明路径、真实异常（`AppSettings.LastSaveError`）与常见原因，并直接返回、不再继续应用内存里的改动。
+- **启动失败不再静默**：`OnLaunched` 里的异常以前会直接逸出，被 XAML 包成 stowed exception——事件日志只留一条 `Microsoft.UI.Xaml.dll / 0xc000027b`，应用日志一行写不出来（`Log` 可能还没初始化），用户只看到"点了没反应"。现在启动流程抽成 `StartCore` 由 `try/catch` 包住，失败时 `StartupGuard.Fatal` 落日志 + 原生 `MessageBoxW` 显示异常类型、消息和调用栈，再退出。兜底自身全程 `try/catch`，不允许它自己抛。
+- **设备列表支持删除离线设备**：右键「删除设备…」，确认框默认按钮是取消；删除条目时**一并清掉该设备的历史**并 VACUUM，勾「永久移除」则写本地黑名单，插件认领阶段就不再探测、不发帧。顺序是**名单先落盘再摘条目**——插件那一轮重报会插进空档把条目塞回来。恢复入口在设备页底部「已屏蔽 N 台设备」。见 `code-flow.md` §5.2。
 - **贴片尺寸改为每拍按当前缩放重算**：换线（HDMI → USB-C / 扩展坞）后缩放变了、任务栏像素尺寸却没变时，贴片会一直沿用旧尺寸（重启才恢复）；`GetDpiForWindow` 返回 0 的瞬间还会按 100% 算错。现在高度每拍按 `rect + dpi/96` 重算，高度或缩放任一变就重画。见 `dev/runtime-pitfalls.md` §16.11。
 - **贴片选屏改用显示器身份，修两个 bug**：① 设置页不再显示「主显示器 / 显示器 2」，改为真实名字（`DELL S2719DC · 2560×1440（主显示器）`）；② 切到「仅电脑屏幕」后贴片不再消失——配置的屏不在时降级贴主屏，1 秒内跟到新任务栏。根因是拿 `\\.\DISPLAYn`（当前配置里的序号）当身份与名字，改存 `monitorDevicePath` + 名字快照。见 `dev/monitor-identity.md`。
 - 设置页屏幕行加刷新按钮（页面缓存复用，插拔后不自动重扫）；配置的屏没插时仍列出 `<名字>（未连接）`，保存不会静默改回主屏。
@@ -138,6 +144,11 @@
 - 设备列表右键可自定义外设名称和图标；覆盖值按稳定设备 ID 保存，应用到实时展示与历史页面，已有采样不改写、后续采样沿用自定义名称。
 - 新增剩余使用时间估算，按近期放电历史计算并显示于设备列表和任务栏悬停；设置页提供默认开启的全局开关。
 - 放宽剩余时间估算门槛：使用最近 90 天数据，3 个采样点且可测到 1 个百分点净下降即可估算，适配长续航设备。
+
+## 2026-10-20
+
+- 修「点几次保存后进程直接退出」：受限令牌下写 `HKCU\Run` 抛 `UnauthorizedAccessException`，异常从 `Save_Click` 逸出、被全局熔断器累计 5 次后放行退出。`AutostartService` 改为 `TrySetEnabled(out error)` 内部收口，失败只弹「开机自启未生效」，其余设置照常保存。
+- **定案「没托盘 / 贴片跑到原点 / 保存失败」的真因**：工作区目录带 `Low` 完整性标签，构建出的 exe 继承它，进程以 Low IL 运行，写不了 Medium 的用户目录与 HKCU、也发不了 shell 消息。csproj 构建后自动 `icacls /setintegritylevel Medium`，`run-app.ps1` 再兜一次；启动日志新增 `进程身份`（含 `完整性=`）一行。见 `dev/runtime-pitfalls.md` §20。
 
 ## 版本
 

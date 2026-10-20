@@ -325,6 +325,13 @@ internal static class Native
     public const uint WM_LBUTTONDOWN = 0x0201;
     public const uint WM_MOUSEHOVER = 0x02A1;
     public const uint WM_MOUSELEAVE = 0x02A3;
+    public const uint WM_CAPTURECHANGED = 0x0215;
+    public const uint WM_MOUSEACTIVATE = 0x0021;
+
+    public const int MA_ACTIVATE = 1;
+    public const int MA_NOACTIVATE = 2;
+    public const int MA_ACTIVATEANDEAT = 3;
+    public const int MA_NOACTIVATEANDEAT = 4;
 
     /// <summary>UpdateLayeredWindow 的逐像素 alpha 模式（配合 AC_SRC_ALPHA 使用）。</summary>
     public const uint ULW_ALPHA = 0x00000002;
@@ -430,7 +437,16 @@ internal static class Native
     public static extern IntPtr SetCapture(IntPtr hwnd);
 
     [DllImport("user32.dll")]
+    public static extern IntPtr GetCapture();
+
+    [DllImport("user32.dll")]
     public static extern bool ReleaseCapture();
+
+    public const int VK_LBUTTON = 0x01;
+
+    /// <summary>贴片拖动靠它判断左键还按着没有：捕获对非前台窗口无效，只能轮询（runtime-pitfalls.md §16.5）。</summary>
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
 
     [DllImport("user32.dll")]
     public static extern bool IsWindow(IntPtr hwnd);

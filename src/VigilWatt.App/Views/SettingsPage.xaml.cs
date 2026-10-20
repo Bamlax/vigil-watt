@@ -146,6 +146,11 @@ public sealed partial class SettingsPage : Page
         TaskbarModeHintText.Text = TaskbarBatteryMode.Describe(tag);
     }
 
+    private void TaskbarReset_Click(object sender, RoutedEventArgs e)
+    {
+        App.Services.TaskbarBattery?.ResetPosition();
+    }
+
     /// <summary>副标题按"选中的偏好在本机上实际会生效成什么"来写。</summary>
     private void UpdateBackdropHint(string preference)
     {

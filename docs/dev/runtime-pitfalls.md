@@ -477,6 +477,24 @@ light-dismiss，**用它右键菜单就关不掉**。所以贴片的右键菜单
 **注意命中测试按 alpha 判定**（§16.1）：整块位图铺了 alpha=1 的"不可见底"，
 所以留白处也能按下拖动；否则只有文字/图形像素能拖。
 
+#### 16.5.1 拖动消息被 Win11 任务栏吃掉：轮询 fallback（2026-10-20 实修）
+
+**症状**：拖动"有时失效"——按下去贴片跟一下，鼠标稍微上下飘一点就断；开机或解锁后第一次可能正常，之后再也不行。
+
+**根因（三层）**：
+1. `SetCapture` 文档写明 **Only the foreground window can capture the mouse**；贴片带 `WS_EX_NOACTIVATE`，本线程几乎永远不是前台线程，所以 `SetCapture` 不报错但等于没抓到。
+2. **更深层**：Win11 任务栏（XAML 架构）的输入管理器在 `WM_MOUSEACTIVATE` 阶段就把子窗口的后续点击消息拦截了。诊断日志显示：第一次成功时 `WM_MOUSEACTIVATE → WM_POINTERDOWN → WM_LBUTTONDOWN` 完整链路；失败后只有 `WM_MOUSEACTIVATE`，后续点击消息彻底消失。
+3. **连带 bug**：光标在贴片外松手 → `WM_LBUTTONUP` 永远不投递 → `_dragging` 卡在 `true`，之后悬停贴片自己跳，且每秒 `ApplyPosition` 持续写回记忆。
+
+**修法**：
+1. **主方案**：`WM_MOUSEACTIVATE` 中让 `DefWindowProcW` 先处理（子窗口默认会把消息发给父窗口），只在父窗口要 `MA_ACTIVATEANDEAT` 时才干预为 `MA_NOACTIVATE`——保留双击等正常行为。
+2. **Fallback**：常驻 10Hz 轮询检测按键状态（`GetAsyncKeyState` + `GetCursorPos`）。光标在贴片内 + 左键按下 → 启动拖动；松手 → 结束拖动。拖动中切到 60Hz，手停住 3 拍后回退到 10Hz。
+3. **彻底去掉 `SetCapture`**：跨进程子窗口 + 任务栏 XAML 环境下，捕获不仅无效，还会触发输入管理器的拦截行为。
+
+- 不装钩子、不发合成输入；
+- 偏移没变就不写设置，单击不产生磁盘写；
+- 设置页新增「重置贴片位置」按钮，offset 归零 + 按当前 DPI 绑定。
+
 ### 16.6 本机电量恒定排除
 
 Windows 任务栏**自己就有一个电池图标**，贴片再重复一遍纯属噪音。

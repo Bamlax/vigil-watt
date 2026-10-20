@@ -298,6 +298,18 @@
                                 <ComboBox Grid.Column="1" x:Name="TaskbarMaxCombo" Width="180"
                                           VerticalAlignment="Center" />
                             </Grid>
+                            <Border Style="{StaticResource RowDividerStyle}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16" Padding="0,12">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="重置贴片位置" Style="{StaticResource RowTitleStyle}" />
+                                    <TextBlock Text="将贴片恢复为默认位置（紧贴系统托盘左侧）"
+                                               Style="{StaticResource RowDescStyle}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" x:Name="TaskbarResetBtn"
+                                        Content="重置" Width="80"
+                                        VerticalAlignment="Center"
+                                        Click="TaskbarReset_Click" />
+                            </Grid>
                         </StackPanel>
                     </Border>
                 </StackPanel>

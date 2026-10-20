@@ -22,6 +22,9 @@ namespace VigilWatt.App.Views;
 public sealed partial class SettingsPage : Page
 {
     private readonly Dictionary<string, ToggleSwitch> _pluginToggles = new();
+
+    /// <summary>屏幕下拉框每项对应的友好名（身份 → 名字）：保存时要把名字一并记下，屏没插时才显示得出来。</summary>
+    private readonly Dictionary<string, string> _screenLabels = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<SearchEntry> _searchEntries = new();
     private bool _searchIndexBuilt;
     private DispatcherQueueTimer? _highlightTimer;
@@ -92,6 +95,8 @@ public sealed partial class SettingsPage : Page
         SelectByTag(TaskbarModeCombo, taskbarMode);
         TaskbarModeHintText.Text = TaskbarBatteryMode.Describe(taskbarMode);
         SelectByTag(TaskbarMaxCombo, TaskbarBatteryOptions.Clamp(s.TaskbarBatteryMaxDevices));
+        // 屏幕随时可能插拔：每次进页面重新枚举，选中项按稳定身份还原
+        SyncTaskbarScreenCombo(s.TaskbarBatteryScreen, s.TaskbarBatteryScreenLabel);
 
         // 窗口背景：下拉框选中"用户偏好"，副标题说"这台机器上实际会生效什么"——
         // 两者不是一回事（Win10 上选 Mica 会静默降级成 Acrylic），分开显示才不会让人困惑。
@@ -149,6 +154,65 @@ public sealed partial class SettingsPage : Page
     private void TaskbarReset_Click(object sender, RoutedEventArgs e)
     {
         App.Services.TaskbarBattery?.ResetPosition();
+    }
+
+    /// <summary>重建屏幕下拉框并选中配置项。<paramref name="configuredId"/> 是稳定身份，不是 \\.\DISPLAYn。</summary>
+    private void SyncTaskbarScreenCombo(string? configuredId, string? configuredLabel)
+    {
+        TaskbarScreenCombo.Items.Clear();
+        _screenLabels.Clear();
+        var screens = MonitorCatalog.AllScreens();
+        var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var screen in screens)
+        {
+            // 名称 + 分辨率：两块同型号显示器只靠名字分不开
+            string baseLabel = MonitorSelection.Describe(screen);
+            string label = baseLabel;
+            for (int n = 2; !used.Add(label); n++) label = $"{baseLabel}（{n}）";
+            TaskbarScreenCombo.Items.Add(new ComboBoxItem { Content = label, Tag = screen.Id });
+            _screenLabels[screen.Id] = screen.Label;
+        }
+
+        // 只有一块屏时"跟随主显示器"和它本身同义，不占位
+        if (screens.Count > 1)
+            TaskbarScreenCombo.Items.Add(new ComboBoxItem { Content = "跟随主显示器", Tag = MonitorSelection.PrimaryToken });
+
+        string wanted = string.IsNullOrEmpty(configuredId) ? MonitorSelection.PrimaryToken : configuredId;
+        if (wanted.Equals(MonitorSelection.PrimaryToken, StringComparison.OrdinalIgnoreCase) && screens.Count == 1)
+            wanted = screens[0].Id;
+
+        foreach (ComboBoxItem item in TaskbarScreenCombo.Items)
+        {
+            if (item.Tag is string tag && tag.Equals(wanted, StringComparison.OrdinalIgnoreCase))
+            {
+                TaskbarScreenCombo.SelectedItem = item;
+                return;
+            }
+        }
+
+        // 配置的屏当前不在：仍列出它并标"未连接"，名字用上次记下的——保存时也不会被静默改回主屏
+        string name = configuredLabel is { Length: > 0 } ? configuredLabel : NameOfMissingScreen(wanted);
+        var offline = new ComboBoxItem { Content = $"{name}（未连接）", Tag = wanted };
+        TaskbarScreenCombo.Items.Add(offline);
+        _screenLabels[wanted] = name;
+        TaskbarScreenCombo.SelectedItem = offline;
+    }
+
+    /// <summary>配置的屏没插时的名字：先按设备路径查（未激活的屏也能查到），再退回 GDI 序号文案。</summary>
+    private static string NameOfMissingScreen(string id)
+    {
+        string? name = MonitorCatalog.FriendlyNameOf(id);
+        if (!string.IsNullOrEmpty(name)) return name;
+        return id.StartsWith(@"\\.\", StringComparison.Ordinal) ? MonitorSelection.FallbackLabel(id) : "未知显示器";
+    }
+
+    private void TaskbarScreenRefresh_Click(object sender, RoutedEventArgs e)
+    {
+        // 保持当前选择：还活着就用它的新名字，不在了就沿用配置里记下的名字
+        string? tag = (TaskbarScreenCombo.SelectedItem as ComboBoxItem)?.Tag as string;
+        var hit = tag == null ? null : MonitorSelection.Match(MonitorCatalog.AllScreens(), tag);
+        SyncTaskbarScreenCombo(tag, hit?.Label ?? App.Services.Settings.TaskbarBatteryScreenLabel);
     }
 
     /// <summary>副标题按"选中的偏好在本机上实际会生效成什么"来写。</summary>
@@ -428,6 +492,16 @@ public sealed partial class SettingsPage : Page
                                      && taskbarMaxItem.Tag is int taskbarMaxValue
             ? TaskbarBatteryOptions.Clamp(taskbarMaxValue)
             : TaskbarBatteryOptions.Default;
+        // 身份与名字一起存：屏没插时设置页还要显示它叫什么叫
+        if (TaskbarScreenCombo.SelectedItem is ComboBoxItem screenItem && screenItem.Tag is string screenTag)
+        {
+            s.TaskbarBatteryScreen = screenTag;
+            if (_screenLabels.TryGetValue(screenTag, out var screenLabel)) s.TaskbarBatteryScreenLabel = screenLabel;
+        }
+        else
+        {
+            s.TaskbarBatteryScreen = MonitorSelection.PrimaryToken;
+        }
         s.WindowBackdrop = (BackdropCombo.SelectedItem as ComboBoxItem)?.Tag as string ?? WindowBackdrop.Auto;
         s.LogLevel = LogLevelNames.Normalize((LogLevelCombo.SelectedItem as ComboBoxItem)?.Tag as string);
         s.LogRetentionDays = (int)LogRetentionBox.Value;
@@ -461,7 +535,7 @@ public sealed partial class SettingsPage : Page
         // 任务栏贴片开关即时生效（与小组件同一条路）
         if (s.TaskbarBatteryEnabled && App.Services.TaskbarBattery == null)
         {
-            App.Services.TaskbarBattery = new TaskbarPillWindow();
+            App.Services.TaskbarBattery = new TaskbarPillManager();
         }
         else if (!s.TaskbarBatteryEnabled && App.Services.TaskbarBattery != null)
         {

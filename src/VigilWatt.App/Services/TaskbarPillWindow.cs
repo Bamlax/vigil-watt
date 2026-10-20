@@ -50,6 +50,9 @@ public sealed class TaskbarPillWindow : IDisposable
     private int _tipDibW, _tipDibH;
     private Gdi.Bitmap? _bitmap;
     private int _pillW, _pillH;
+
+    /// <summary>上次渲染用的缩放。缩放变了即使高度没变也要重画（字宽、圆角都按缩放算）。</summary>
+    private float _renderScale;
     private int _offsetPx;
     private int _offsetDpi;
     private uint _windowDpi;
@@ -68,10 +71,16 @@ public sealed class TaskbarPillWindow : IDisposable
     private string? _shownTipId;
     private bool _tipVisible;
     private bool _hoverArmed;
+    private readonly Action? _onInvalidate;
 
-    public TaskbarPillWindow()
+    /// <summary>窗口仍有效（未销毁）。供协调层快速路径判断。</summary>
+    public bool IsWindowValid => _hwnd != IntPtr.Zero && Native.IsWindow(_hwnd);
+
+    public TaskbarPillWindow(IntPtr taskbarHwnd, Action? onInvalidate = null)
     {
         _current = this;
+        _taskbar = taskbarHwnd;
+        _onInvalidate = onInvalidate;
         LoadOffsetFromSettings();
 
         // 拖动轮询表常驻运行（20Hz）：Win11 任务栏 XAML 输入管理器会吃掉子窗口的鼠标消息，
@@ -154,6 +163,7 @@ public sealed class TaskbarPillWindow : IDisposable
         App.Services.Manager.DevicesChanged -= OnDevicesChanged;
         HideTip();
         ReleaseWindow();
+        _taskbar = IntPtr.Zero;
 
         if (ReferenceEquals(_current, this)) _current = null;
     }
@@ -252,7 +262,6 @@ public sealed class TaskbarPillWindow : IDisposable
     /// </summary>
     private void AttachToTaskbar()
     {
-        _taskbar = Native.FindWindowW(Native.TaskbarClassName, null);
         if (_taskbar == IntPtr.Zero || _hwnd == IntPtr.Zero) return;
 
         Native.SetParent(_hwnd, _taskbar);
@@ -269,6 +278,11 @@ public sealed class TaskbarPillWindow : IDisposable
         {
             Interlocked.Exchange(ref _rebuildQueued, 0);
             if (_disposed) return;
+            if (_onInvalidate != null)
+            {
+                _onInvalidate();
+                return;
+            }
             EndDrag();
             ReleaseWindow();
             _taskbarRect = default;
@@ -288,7 +302,6 @@ public sealed class TaskbarPillWindow : IDisposable
             if (Native.IsWindow(_hwnd)) Native.DestroyWindow(_hwnd);
             _hwnd = IntPtr.Zero;
         }
-        _taskbar = IntPtr.Zero;
         _windowDpi = 0;
         ReleaseDib();
         _bitmap?.Dispose();
@@ -322,17 +335,24 @@ public sealed class TaskbarPillWindow : IDisposable
         EnsureWindow();
         if (_hwnd == IntPtr.Zero) return;
 
-        // Explorer 重启会换一个任务栏窗口，旧 HWND 失效，要重新挂
-        var taskbar = Native.FindWindowW(Native.TaskbarClassName, null);
-        if (taskbar == IntPtr.Zero) return;
-        if (taskbar != _taskbar || Native.GetParent(_hwnd) != taskbar)
+        // 协调层传入的任务栏已失效：通知上层重建，自己不再尝试找新任务栏
+        if (_taskbar == IntPtr.Zero || !Native.IsWindow(_taskbar))
+        {
+            _onInvalidate?.Invoke();
+            return;
+        }
+
+        // Explorer 重启或父窗口被拆：重新挂
+        if (Native.GetParent(_hwnd) != _taskbar)
             AttachToTaskbar();
 
         // 任务栏 DPI 变了：分层子窗口坐标空间跟创建时绑死，只重算矩形不够
         uint dpi = TaskbarDpi();
-        if (_windowDpi != 0 && dpi != 0 && dpi != _windowDpi)
+        if (dpi == 0) return;   // 句柄正在重建：这一拍别按 100% 算尺寸，等下一拍
+        if (_windowDpi == 0) _windowDpi = dpi;   // 建窗时没读到 DPI：以当前为基准，否则之后的变化永远检测不到
+        if (dpi != _windowDpi)
         {
-            RequestRebuild();
+            _onInvalidate?.Invoke();
             return;
         }
 
@@ -345,27 +365,32 @@ public sealed class TaskbarPillWindow : IDisposable
             _taskbarRect = rect;
             _trayRect = tray;
             _taskbarHorizontal = TaskbarLayout.IsHorizontal(rect);
-            int h = TaskbarLayout.PillHeight(rect, Scale, TaskbarMarginDip, MinHeightDip, MaxHeightDip);
-            if (h != _pillH)
-            {
-                _pillH = h;
-                _needRender = true;
-            }
+        }
+
+        // 尺寸每拍按当前矩形与当前缩放重算，不能只在"矩形变了"时算：换线（Type-C / 扩展坞）后
+        // 缩放会变而任务栏像素尺寸可能不变，那时贴片会一直用旧尺寸。
+        float scale = dpi / 96f;
+        int height = TaskbarLayout.PillHeight(rect, scale, TaskbarMarginDip, MinHeightDip, MaxHeightDip);
+        if (height != _pillH || scale != _renderScale)
+        {
+            Log.Debug($"任务栏贴片：尺寸重算 {_pillW}×{height}，scale={scale:0.00}，任务栏={rect.Width}×{rect.Height}");
+            _pillH = height;
+            _renderScale = scale;
+            _needRender = true;
         }
 
         if (_needRender || _bitmap == null) Render();
         ApplyPosition();
     }
 
-    /// <summary>找任务栏与托盘矩形（物理像素、屏幕坐标）；<paramref name="hidden"/> 表示自动隐藏已收起。</summary>
-    private static bool TryGetTaskbar(out PixelRect taskbar, out PixelRect tray, out bool hidden)
+    /// <summary>读当前任务栏与托盘矩形（物理像素、屏幕坐标）；<paramref name="hidden"/> 表示自动隐藏已收起。</summary>
+    private bool TryGetTaskbar(out PixelRect taskbar, out PixelRect tray, out bool hidden)
     {
         taskbar = default;
         tray = default;
         hidden = false;
 
-        var hwnd = Native.FindWindowW(Native.TaskbarClassName, null);
-        if (hwnd == IntPtr.Zero || !Native.GetWindowRect(hwnd, out var rect)) return false;
+        if (_taskbar == IntPtr.Zero || !Native.GetWindowRect(_taskbar, out var rect)) return false;
 
         taskbar = new PixelRect(rect.Left, rect.Top, rect.Width, rect.Height);
         if (TaskbarLayout.IsTaskbarHidden(taskbar))
@@ -375,7 +400,7 @@ public sealed class TaskbarPillWindow : IDisposable
         }
 
         // 托盘找不到不算失败：退回用任务栏自身边缘定位，贴片照样显示
-        var trayHwnd = Native.FindWindowExW(hwnd, IntPtr.Zero, Native.TrayNotifyClassName, null);
+        var trayHwnd = Native.FindWindowExW(_taskbar, IntPtr.Zero, Native.TrayNotifyClassName, null);
         if (trayHwnd != IntPtr.Zero && Native.GetWindowRect(trayHwnd, out var trayRect))
             tray = new PixelRect(trayRect.Left, trayRect.Top, trayRect.Width, trayRect.Height);
         return true;
@@ -910,7 +935,7 @@ public sealed class TaskbarPillWindow : IDisposable
         if (_hwnd == IntPtr.Zero) return default;
         var mon = Native.MonitorFromWindow(_hwnd, Native.MONITOR_DEFAULTTONEAREST);
         if (mon == IntPtr.Zero) return default;
-        var info = new Native.MONITORINFO { cbSize = (uint)Marshal.SizeOf<Native.MONITORINFO>() };
+        var info = new Native.MONITORINFOEX { cbSize = (uint)Marshal.SizeOf<Native.MONITORINFOEX>() };
         if (!Native.GetMonitorInfoW(mon, ref info)) return default;
         var r = info.rcWork;
         return new PixelRect(r.Left, r.Top, r.Width, r.Height);

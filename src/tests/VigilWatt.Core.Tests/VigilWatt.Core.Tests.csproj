@@ -73,6 +73,8 @@
     <!-- 任务栏贴片的定位数学与取值收敛同样是零依赖纯逻辑（只碰 int/Math），定位算错必须能在单测里复现 -->
     <Compile Include="..\..\VigilWatt.App\Services\TaskbarLayout.cs" />
     <Compile Include="..\..\VigilWatt.App\Services\TaskbarBatteryMode.cs" />
+    <!-- 选屏逻辑（身份匹配 / 型号兜底 / 目标缺失降级主屏）是纯函数，换显示模式后贴片该去哪必须能单测 -->
+    <Compile Include="..\..\VigilWatt.App\Services\MonitorSelection.cs" />
     <!-- 更新日志解析是三处消费方共用的格式契约（打包截段、Release 正文、应用内渲染），
          解析错了只会表现为「更新内容空白」，必须能在单测里复现 -->
     <Compile Include="..\..\VigilWatt.App\Services\ReleaseNotes.cs" />

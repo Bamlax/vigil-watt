@@ -52,6 +52,12 @@ public class AppSettings
     /// <summary>记下 <see cref="TaskbarBatteryOffsetX"/> 时任务栏的 DPI（96=100%）。0 = 旧配置尚未绑定，首次读到任务栏 DPI 时只记数不改像素。</summary>
     public int TaskbarBatteryOffsetDpi { get; set; }
 
+    /// <summary>任务栏贴片显示在哪块屏幕。空或 ":primary:" = 跟随主屏；否则为显示器稳定身份（monitorDevicePath，见 docs/dev/monitor-identity.md）。</summary>
+    public string TaskbarBatteryScreen { get; set; } = "";
+
+    /// <summary>上次选中屏幕的友好名（如 "DELL S2719DC"）。只用于那块屏没插时仍能显示它的名字，不参与匹配。</summary>
+    public string TaskbarBatteryScreenLabel { get; set; } = "";
+
     public bool StartMinimized { get; set; } = true;
 
     /// <summary>窗口背景材质。取值见 <c>VigilWatt.App.Services.WindowBackdrop</c>：Auto（跟随系统能力）/ Mica（云母，仅 Win11，不满足自动降级）/ Acrylic（磨砂，Win10 1809+）/ Solid（纯色分层底）；未知取值按 Auto。</summary>

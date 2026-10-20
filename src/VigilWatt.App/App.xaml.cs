@@ -18,7 +18,7 @@ public sealed class AppServices : IDisposable
     public DeviceManager Manager { get; }
     public TrayService Tray { get; private set; } = null!;
     public WidgetWindow? Widget { get; set; }
-    public TaskbarPillWindow? TaskbarBattery { get; set; }
+    public TaskbarPillManager? TaskbarBattery { get; set; }
     public MainWindow? MainWindow { get; set; }
 
     public AppServices()
@@ -181,7 +181,7 @@ public partial class App : Application
 
         if (Services.Settings.TaskbarBatteryEnabled)
         {
-            Services.TaskbarBattery = new TaskbarPillWindow();
+            Services.TaskbarBattery = new TaskbarPillManager();
         }
 
         _ = CheckForStartupUpdateAsync();

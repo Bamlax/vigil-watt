@@ -72,6 +72,10 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | DualSense · passive Bluetooth HID | Implemented, on by default; contributor hardware only |
 | GANSS GS3104T-Pro · 33-byte query frame | Implemented, off by default; writes frames. Contributor hardware only |
 | MCHOSE V9 Pro headset · 64-byte query frame | Implemented, off by default; writes frames, shares the MCHOSE switch. Contributor hardware only |
+| CHERRY PIXIU75 · 64-byte block protocol (block `0x1A`) | Implemented, off by default; writes frames. Contributor hardware only |
+| Pulsar X2 V2 · 17-byte STATUS/POWER | Implemented, off by default; writes frames. Contributor hardware only |
+| AJAZZ AK870 · feature `F7` status query | Implemented, off by default; writes frames. Contributor hardware only |
+| Thunderobot ML903 NearLink Se · `0xA0` device-info TLV | Implemented, off by default; writes frames. Contributor hardware only |
 | Classic Bluetooth · HFP gateway device-node property | EDIFIER W820NB verified |
 | System battery · `GetSystemPowerStatus` | Implemented; can be enabled optionally |
 

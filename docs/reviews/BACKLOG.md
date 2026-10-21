@@ -32,6 +32,8 @@
 | **CR-74** | 设备 ID 改端口无关键后的代价：同型号两只接收器同时插着会被并成一台（键相同）。需要时用「当前在位集合 + 端口哈希」做次级区分 | `Plugins/PluginUtils.cs:StableDeviceKey` | `open` |
 | **CR-79** | **未定级，只有一次观测**：启动后前 30 分钟提交按 ~0.47MB/min 上爬（122.6→136.6），窗口隐藏时照涨；3 小时端点 134.8 未再涨，但 144 分钟无中间采样。倾向高水位，需多次运行 + 中间采样 + 换方向（Release / Win11 / GPU / 设备数）才能定性 | `Services/TaskbarPillWindow.cs:UpdateCore`、`Services/TrayService.cs:Render` | `open` |
 | **CR-80** | BLE GATT 直读只 `Dispose` 了 `BluetoothLEDevice`，`svcResult.Services[0]` 与 `chrResult.Characteristics[0]` 没 Dispose（每 2–3 分钟一次，句柄小漏） | `Ble/BleBatteryWatcher.cs:ReadBatteryViaGattAsync` | `open` |
+| **CR-81** | 查询型插件休眠即判离线：CHERRY 深度休眠块通道静音 → 3 轮 `ReportPollFailure` 转离线 + 熔断，唤醒后最长等 5 分钟退避才恢复。GANSS / 雷神 ML903 同病，需要一次跨插件的「休眠不等于失联」方案 | `Plugins/Cherry/CherryPlugin.cs:PollDevice`、`Plugins/Ganss/GanssPlugin.cs:PollDevice`（protocols.md §13.6） | `open` |
+| **CR-82** | CHERRY 2.4G 与有线是两台设备（`PIXIU75 Dongle` / `PIXIU 75`），显示名不同，历史库各占一行、互报离线；要合并得改设备 ID 口径 | `Plugins/Cherry/CherryPlugin.cs:BuildDisplayName`（protocols.md §13.6） | `open` |
 
 ## 重构候选（未做）
 
@@ -43,4 +45,4 @@
 | **D3** | 图表的坐标和命中，抽成纯函数 | `open` |
 | **D4** | 小组件的排序和宽度，抽出视图模型 | `open` |
 | **D5** | 设置页保存时的副作用，抽出视图模型 | `open` |
-| **D6** | 各插件「发帧再读到截止」的循环 | `open` |
+| **D6** | 各插件「发帧再读到截止」的循环（现有 Cherry `RequestBlock`、Pulsar `Query`、迈从、GANSS 各一套） | `open` |

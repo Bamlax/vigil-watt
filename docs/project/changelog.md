@@ -5,6 +5,9 @@
 
 ## 2026-10-21
 
+- **新增 CHERRY 插件（PIXIU75 蔚蓝档案 圣园未花联动款）**：64 字节块协议（report `0x04`，块 `0x1A` = 电量 + 充电位），真机 48% 与官方软件一致，插线后 55% 判充电中；有线（`046A:01E2`）与 2.4G（`046A:01E4`）共用同一块通道。见 `hardware/protocols.md` §13。
+- **新增派世 Pulsar 插件（X2 V2 DJMAX 联动款）**：按 Linux `hid-pulsar` 的 17 字节帧（report `0x08`，STATUS/POWER）实现，真机 20% + 3566 mV。见 `hardware/protocols.md` §14。
+- 两个插件都写帧，`PluginEnabled` 默认关；休眠无应答走 `ReportPollFailure` 记账，3 轮转离线并熔断停写，唤醒后最长等 5 分钟退避恢复（与 GANSS 同）。
 - **设备 ID 改为端口无关**：HID 实例段前两段（`7&15dc4901`）由 Windows 按物理端口生成，接收器不报序列号时换 USB 口就变；旧实现哈希整条路径，于是同一个接收器换口后变成一台新设备（历史分裂、黑名单与自定义名失效）。`PluginUtils.StableDeviceKey` 只抹前两段、保留集合序号，`IdFor` 与罗技 `SlotId` 都改走它。代价是同型号两只接收器同时插着会被并成一台（CR-74）。见 `code-flow.md` §2.2。
 - **拔出即时下线，插入不做即时检测**：托盘窗口收 `WM_DEVICECHANGE` 后跑 `RequestReconcileAsync`（只做消失检测，不认领不写帧），约 0.3 秒下线；15 秒节拍用同一个 `ReconcileRemovals` 兜底。**插入方向试过 1 秒接口路径检查 + 30 秒重试阶梯，当天回退**——插入广播实测不可靠、USB 枚举有固有延迟，这段延时是硬件成本，不值得为它叠机制；插入回到原节拍，要立即发现就点主界面「刷新」（`RequestPollAsync` 会认领）。顺带修掉罗技拔掉后不上报离线（`Upsert` 存快照副本，改本地 `IsOnline` 传不到 UI）、刚插上整轮 ping 超时后 5 分钟不再探（丢句柄前必须 `StopListening`，否则监听任务在已关闭句柄上空转、且此后不再重启）。`ReconcileRemovals` 遇到空扫描直接返回——那是 CM 枚举失败，不是"设备全拔了"。见 `code-flow.md` §2.3。
 - **被动监听空转修掉**：句柄失效时 `ReadInput` 立即返回 null，`StartPassiveListen` / `EnsureListening` 的外层 `while` 没有退避 → 实测 7.9 秒刷 22.4 万行、烧满一个核。现在按"连续 3 次在 100ms 内返回 null"判定句柄失效，退避 200ms；正常静音仍等满 500ms，离线确认节拍不受影响。见 BACKLOG CR-75/76（已关闭）。

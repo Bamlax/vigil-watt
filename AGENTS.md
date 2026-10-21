@@ -57,7 +57,10 @@ VigilWatt：Windows 无线设备电量监控（WinUI 3 / .NET 8，个人自用�
 - 硬件写入类改动：先读 `docs/hardware/safety.md`（零写入原则、写入闸门；各插件开关现状见其 §3.1）。
 - 改读数过滤器 / 帧解析 / 历史库后，**必须重跑单测**。
 - 动代码前对照 `docs/dev/review-standard.md` 的 R 清单；**审查发现的未修项在 `docs/reviews/BACKLOG.md`**（唯一载体）。
-- **收进社区贡献后补两处，各管一段，不重复**：根目录 `CONTRIBUTORS.md` 按人加一行（用户向，只写"谁做了什么"、关联 PR）；`docs/project/contributions.md` 记这个 PR 收了什么、**没**收到什么、是否本机复测。
+- **收进社区贡献：署名先带进来，再补两处记录。**
+  - **署名三处都要保留**：① git 作者——用 `git merge --no-ff` 保留原提交，不改 author、不 squash；必须 `cherry-pick` 或按文件摘取子集时，用 `--author`，并把原 PR 号写进提交信息。② `src/` 文件头的「时间 + 用户名」保持贡献者本人（格式见 `docs/dev/comment-style.md` §7）；接手大改另起一行注明维护者，**不覆盖**原署名。③ 文档两处见下。
+  - `CONTRIBUTORS.md` 按人加一行（用户向，只写"谁做了什么"、关联 PR）；贡献者自己写的行若留了「待合并」这类占位，合并时换成 PR 链接。
+  - `docs/project/contributions.md` 记这个 PR 收了什么、**没**收到什么、是否本机复测。
 
 ## 4. 构建与测试
 

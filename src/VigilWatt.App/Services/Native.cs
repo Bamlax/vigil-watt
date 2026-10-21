@@ -45,6 +45,10 @@ internal static class Native
     public const uint WM_RBUTTONUP = 0x0205;
     public const uint WM_NULL = 0x0000;
 
+    // ---- 设备变更（插拔广播，发给所有顶层窗口，不需要 RegisterDeviceNotification）----
+    public const uint WM_DEVICECHANGE = 0x0219;
+    public const uint DBT_DEVNODES_CHANGED = 0x0007;
+
     // ---- 菜单 ----
     public const uint MF_STRING = 0x0;
     public const uint MF_SEPARATOR = 0x800;

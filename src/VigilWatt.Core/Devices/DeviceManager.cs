@@ -54,6 +54,7 @@ public sealed class DeviceManager : IDisposable
     private readonly SemaphoreSlim _passGate = new(1, 1);
     private Task _currentPoll = Task.CompletedTask;
     private Task _currentDiscovery = Task.CompletedTask;
+    private Task _currentReconcile = Task.CompletedTask;
 
     /// <summary>单台设备状态有更新（含低电量提醒触发）。</summary>
     public event Action<DeviceStatus>? DeviceUpdated;
@@ -305,6 +306,57 @@ public sealed class DeviceManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// 插拔事件：对所有启用插件做一遍"消失检测"（零写入），拔出的设备立即下线。
+    /// **只拆不认领**——插入交给 15 秒/60 秒节拍或主界面手动刷新（<see cref="RequestPollAsync"/> 会 Attach）。见 code-flow.md §2.3。
+    /// </summary>
+    public Task RequestReconcileAsync()
+    {
+        lock (_pollSync)
+        {
+            if (!_currentPoll.IsCompleted) return _currentPoll;   // 完整轮询本来就会拆
+            if (!_currentReconcile.IsCompleted) return _currentReconcile;
+            _currentReconcile = RunExclusiveAsync(ReconcileOnceAsync);
+            return _currentReconcile;
+        }
+    }
+
+    private Task ReconcileOnceAsync()
+    {
+        try
+        {
+            ReconcileAllEnabled(HidDeviceScanner.Scan());
+        }
+        catch (Exception ex)
+        {
+            Log.Error("插拔移除检测异常", ex);
+        }
+        return Task.CompletedTask;
+    }
+
+    /// <summary>对所有启用的插件跑一遍"消失检测"（零写入），返回是否有设备被拆。</summary>
+    private bool ReconcileAllEnabled(IReadOnlyList<HidDeviceInfo> hidDevices)
+    {
+        bool changed = false;
+        foreach (var plugin in _plugins)
+        {
+            if (!IsPluginEnabled(plugin)) continue;
+            try
+            {
+                foreach (var d in plugin.ReconcileRemovals(hidDevices))
+                {
+                    Upsert(d);
+                    changed = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"插件 {plugin.Name} 移除检测失败", ex);
+            }
+        }
+        return changed;
+    }
+
     /// <summary>把一段 pass 放到线程池并**串行**执行（闸门保证同一时刻只有一段 pass 在动插件）；用 Task.Run 因调用方可能是 UI 线程而 HID 探测是阻塞 I/O。</summary>
     private Task RunExclusiveAsync(Func<Task> body) => Task.Run(async () =>
     {
@@ -439,6 +491,11 @@ public sealed class DeviceManager : IDisposable
         try
         {
             var hidDevices = HidDeviceScanner.Scan();
+
+            // 先对所有启用的插件做"消失检测"（零写入）。不进 15 秒节拍的插件（罗技/北通/AULA/GANSS）
+            // 本来要等 60 秒主轮询才拆会话，拔掉后条目一直显示在线。
+            ReconcileAllEnabled(hidDevices);
+
             var tasks = new List<Task<IReadOnlyList<DeviceStatus>>>();
             foreach (var plugin in _plugins)
             {

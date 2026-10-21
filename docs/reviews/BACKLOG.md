@@ -29,6 +29,7 @@
 | **CR-70** | 社区 PR #15 的 BLE 大改未纳入（`BleBatteryWatcher` +38/-22、`WatcherProps`、`DeviceKindGuesser`、`DeviceSourceInfo`、`SettingsPage`）。通用 GATT 路径已能读标准电池服务，故本轮只摘设备插件；蓝牙通道要单独一轮 | PR #15 | `open` |
 | **CR-71** | 社区 issue #12（任务栏贴片避让托盘图标）只有根因与修法描述，没有代码。`TaskbarLayout.Place` 现在固定贴托盘左侧，与 CR-39 同源 | issue #12、`Services/TaskbarLayout.cs:Place` | `open` |
 | **CR-72** | 社区 issue #11 现象 2（断电后死锁）未处理：涉及基类读实现，风险高于收益，需单独排期并配复现手段 | issue #11 | `open` |
+| **CR-74** | 设备 ID 改端口无关键后的代价：同型号两只接收器同时插着会被并成一台（键相同）。需要时用「当前在位集合 + 端口哈希」做次级区分 | `Plugins/PluginUtils.cs:StableDeviceKey` | `open` |
 
 ## 重构候选（未做）
 

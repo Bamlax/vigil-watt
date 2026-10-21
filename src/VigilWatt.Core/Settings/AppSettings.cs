@@ -24,6 +24,7 @@ public class AppSettings
     /// <summary>历史保留天数，过期清理。</summary>
     public int HistoryRetentionDays { get; set; } = 90;
 
+    /// <summary>开机自启。**默认关闭**，且这里只是保存时的快照——真正生效的是 HKCU Run 键（`AutostartService`），改这个字段不会开关自启。</summary>
     public bool Autostart { get; set; }
 
     public bool WidgetEnabled { get; set; }

@@ -85,6 +85,9 @@ public sealed class LogitechPlugin : IBatteryPlugin
 
     private readonly ConcurrentDictionary<string, ReceiverSession> _sessions = new();
 
+    /// <summary>认领表：Attach 时记下来，<see cref="ReconcileRemovals"/> 没有 claims 参数也要能释放。</summary>
+    private DeviceClaimRegistry? _claims;
+
     private sealed class DevEntry
     {
         public required DeviceStatus Status;
@@ -110,6 +113,7 @@ public sealed class LogitechPlugin : IBatteryPlugin
         public DateTimeOffset OpenFailedAt;             // 上次打开失败的时刻，供退避重试（CR-17）
         public bool DirectDevice;                       // true = 设备本体直连，false = 接收器
         public bool InitialScanDone;                    // 首次全槽扫描已完成
+        public int NotReadyScans;                       // 连续"整轮一个都没应答"的次数（接收器刚插上时会这样）
         public readonly Dictionary<byte, DevEntry> Devices = new();
         public readonly Dictionary<byte, DateTimeOffset> EmptySlotUntil = new();
         public Action<byte, byte[]>? NotifyHandler;
@@ -124,6 +128,7 @@ public sealed class LogitechPlugin : IBatteryPlugin
     private IReadOnlyList<DeviceStatus> AttachCore(
         IReadOnlyList<HidDeviceInfo> availableDevices, DeviceClaimRegistry claims)
     {
+        _claims = claims;
         var claimed = new List<DeviceStatus>();
 
         // 同 VID/PID 上按目录报文偏好跳过冗余接口（Bolt 跳短；Unifying 跳长）
@@ -189,20 +194,35 @@ public sealed class LogitechPlugin : IBatteryPlugin
             }
         }
 
+        // 已拔出的接收器（与 ReconcileRemovals 同一套动作，别再各写一遍）
+        claimed.AddRange(ReconcileRemovals(availableDevices));
+        return claimed;
+    }
+
+    /// <summary>只拆"扫描结果里已经没有"的接收器会话：停监听、关句柄、把槽位设备标离线并**上报**。</summary>
+    public IReadOnlyList<DeviceStatus> ReconcileRemovals(IReadOnlyList<HidDeviceInfo> availableDevices)
+    {
+        // 与基类同一处保护：空扫描是枚举失败，不是全部拔出。
+        if (availableDevices.Count == 0) return Array.Empty<DeviceStatus>();
+
+        var gone = new List<DeviceStatus>();
         foreach (var path in _sessions.Keys)
         {
             if (availableDevices.Any(d => d.DevicePath == path)) continue;
-            if (_sessions.TryRemove(path, out var gone))
-            {
-                StopListening(gone);
-                gone.Io?.Dispose();
-                foreach (var d in gone.Devices.Values) d.Status.IsOnline = false;
-                claims.Release(path, Name);
-                Log.Info($"罗技接口已移除: {path}");
-            }
-        }
+            if (!_sessions.TryRemove(path, out var session)) continue;
 
-        return claimed;
+            StopListening(session);
+            session.Io?.Dispose();
+            foreach (var d in session.Devices.Values)
+            {
+                d.Status.IsOnline = false;
+                // 不上报的话拔出后条目永远在线（基类同一处坑的注释）。
+                gone.Add(d.Status);
+            }
+            _claims?.Release(path, Name);
+            Log.Info($"罗技接口已移除: {path}");
+        }
+        return gone;
     }
 
     private void DiscoverDevices(ReceiverSession session)
@@ -269,6 +289,23 @@ public sealed class LogitechPlugin : IBatteryPlugin
             }
         }
 
+        // 刚插上的接收器可能整轮都不应答（实测 2026-10-21：接口打开后 12 秒内 7 次 ping 全超时）。
+        // 这时不能按"空槽 5 分钟"缓存——那会让设备 5 分钟内不再被探；也不能复用这个句柄，
+        // 早开出来的句柄可能根本不通。丢掉句柄、清掉冷却，下一轮重开重扫。
+        // 连续 5 次都不应答才认命（可能是真的空接收器），避免无限重开。
+        if (initial && session.Devices.Count == 0 && session.NotReadyScans < 5)
+        {
+            session.NotReadyScans++;
+            // 必须先停监听再关句柄：否则 ListenTask 在已 Dispose 的句柄上空转（CR-75 同款），
+            // 而且 ListenTask 非 null 会让 EnsureListening 之后永远不再启动——新句柄再也没有被动通知。
+            StopListening(session);
+            session.Io?.Dispose();
+            session.Io = null;
+            session.EmptySlotUntil.Clear();
+            Log.Info($"罗技接收器整轮无应答（第 {session.NotReadyScans} 次），丢弃句柄稍后重开");
+            return;   // InitialScanDone 保持 false，下一轮仍做全扫
+        }
+
         session.InitialScanDone = true;
     }
 
@@ -288,9 +325,9 @@ public sealed class LogitechPlugin : IBatteryPlugin
             session.EmptySlotUntil[idx] = DateTimeOffset.Now + EmptySlotCooldown;
     }
 
-    /// <summary>设备 ID：接收器路径哈希 + 槽位。认领、黑名单、上报三处必须同一套规则。</summary>
+    /// <summary>设备 ID：接收器**端口无关**路径哈希 + 槽位（换 USB 口不产生新设备）。认领、黑名单、上报三处必须同一套规则。</summary>
     private static string SlotId(ReceiverSession session, byte idx)
-        => $"logitech:{PluginUtils.StableHash(session.Info.DevicePath)}:{idx}";
+        => $"logitech:{PluginUtils.StableDeviceHash(session.Info.DevicePath)}:{idx}";
 
     private void AddDevice(ReceiverSession session, byte idx, byte protocolMajor)
     {
@@ -354,8 +391,10 @@ public sealed class LogitechPlugin : IBatteryPlugin
         session.ListenTask = Task.Run(() =>
         {
             Log.Info("罗技 HID++ 通知监听已启动（被动，零写入）");
+            int fastNull = 0;
             while (!cts.IsCancellationRequested)
             {
+                var started = Environment.TickCount64;
                 try
                 {
                     io.PumpNotifications(TimeSpan.FromMilliseconds(500));
@@ -365,6 +404,11 @@ public sealed class LogitechPlugin : IBatteryPlugin
                     if (!cts.IsCancellationRequested)
                         Log.Warn($"罗技通知监听异常: {ex.Message}");
                 }
+
+                // 正常静音会等满 500ms；连续几次几十毫秒返回说明句柄已失效（ReadInput 立即 null），
+                // 不退避的话这个 while 会变成每秒几万次空转、烧满一个核（CR-75/76）。
+                fastNull = Environment.TickCount64 - started < 100 ? fastNull + 1 : 0;
+                if (fastNull >= 3) Thread.Sleep(200);
             }
         }, cts.Token);
     }

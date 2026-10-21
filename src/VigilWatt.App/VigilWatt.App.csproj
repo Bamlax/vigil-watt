@@ -15,8 +15,8 @@
     <Company>evren-oct</Company>
     <Product>VigilWatt</Product>
     <Copyright>Copyright (c) 2026 evren-oct &lt;2021187335@qq.com&gt;</Copyright>
-    <AssemblyTitle>Windows 无线外设电量监控</AssemblyTitle>
-    <Description>Windows 无线外设电量监控</Description>
+    <AssemblyTitle>VigilWatt 无线设备电量监控</AssemblyTitle>
+    <Description>VigilWatt 无线设备电量监控</Description>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>

@@ -7,7 +7,7 @@ namespace VigilWatt.Core.Plugins.Darkrim;
 /// <summary>
 /// 功 能： 寸渊影弑 (DARKRIM) 2.4G 耳机插件：被动优先 + 一条官方同款只读查询。
 /// 2026/10/19 19:40:00 zc165
-/// 帧格式、CRC、查询帧与"为什么必须查询"见 docs/hardware/protocols.md §16。
+/// 帧格式、CRC、查询帧与"为什么必须查询"见 docs/hardware/darkrim.md §1。
 /// </summary>
 public sealed class DarkrimPlugin : BatteryPluginBase
 {
@@ -65,7 +65,7 @@ public sealed class DarkrimPlugin : BatteryPluginBase
     ///
     /// **为什么必须发这一条**：真机实测 dongle 不主动推电量——纯被动监听 45 秒、
     /// 重新插拔 dongle、重开句柄都拿不到 <c>0x11/01</c>；而发这条官方同款只读查询后
-    /// 立刻回电量帧（90% 与官方界面一致）。详见 protocols.md §16.3。
+    /// 立刻回电量帧（90% 与官方界面一致）。详见 darkrim.md §1.3。
     /// </summary>
     protected override (string Protocol, int? Percent, ChargingState Charging)? Probe(HidDeviceHandle handle)
         => ProbeAsync(handle).GetAwaiter().GetResult();

@@ -10,7 +10,7 @@ namespace VigilWatt.Core.Plugins.Logitech;
 /// <summary>
 /// 功 能： 罗技 2.4G 插件：支持 Unifying / Bolt / Lightspeed / Nano 接收器、USB 直连设备（HID++ 协议）。
 /// 2026/10/06 15:53:36 xliu
-/// 电量读取级联：Unified Battery 0x1004 → Battery Status 0x1000 → Battery Voltage 0x1001 → ADC Measurement 0x1F20 → HID++ 1.0 寄存器 0x07/0x0D（协议细节见 docs/hardware/protocols.md §3）。
+/// 电量读取级联：Unified Battery 0x1004 → Battery Status 0x1000 → Battery Voltage 0x1001 → ADC Measurement 0x1F20 → HID++ 1.0 寄存器 0x07/0x0D（协议细节见 docs/hardware/logitech.md）。
 /// </summary>
 public sealed class LogitechPlugin : IBatteryPlugin
 {

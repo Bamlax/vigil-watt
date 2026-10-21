@@ -7,7 +7,7 @@ namespace VigilWatt.Core.Tests;
 /// 功 能： 迈从 K7 V2 Ultra+（3837:1018）编解码的回归测试。
 /// 2026/10/21 haihuang0506
 /// 全部向量都是**真机抓到的原始帧**（2026-10-21 本机 K7 V2 Ultra+）：设备信息应答、睡着了只回的 0xFF、
-/// 以及两条 0x0600 状态事件。帧结构见 docs/hardware/protocols.md §13。
+/// 以及两条 0x0600 状态事件。帧结构见 docs/hardware/mchose.md §3。
 /// </summary>
 public sealed class MchoseK7CodecTests
 {

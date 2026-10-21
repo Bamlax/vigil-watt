@@ -9,7 +9,7 @@ public readonly record struct K7StatusEvent(int? Percent, byte? ChargeStatus);
 /// <summary>
 /// 功 能： 迈从 K7 V2 Ultra+（接收器 0x3837:0x1018）的纯帧编解码，不碰句柄、不写日志。
 /// 2026/10/21 haihuang0506
-/// 只有 0x4D 一条通道可用（feature 写通读不通），A5/A7/V2 那几族都不成立；细节见 protocols.md §15。
+/// 只有 0x4D 一条通道可用（feature 写通读不通），A5/A7/V2 那几族都不成立；细节见 mchose.md §3。
 /// </summary>
 public static class MchoseK7Codec
 {

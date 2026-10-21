@@ -8,7 +8,7 @@
 
 当前安装包 **1.2.2**（`dist/`，本机试装用；尚未上传正式 Release）。正式线上以 GitHub 最新 Release 为准，Gitee 是回退源；更新源 GitHub 优先、8 秒不通回退 Gitee。发新版时保留上一版 `*-full.nupkg` 作为 delta 基准；规则见 `dev/build.md` §8。
 
-本机已打通：迈从 G87（0x13）、雷柏 VT3（status-report7，纯被动）、北通 T9（被动流）、经典蓝牙耳机（HFP 网关节点 `DEVPKEY_Device_BatteryLevel`）。罗技 Bolt 接收器（C548）+ MX Master 3S 已真机验证。本机电量可选，默认关。弱水时砂 2.4G 无电量通道，不再投入。
+本机已打通：迈从 G87（0x13）、雷柏 VT3（status-report7，纯被动）、北通 T9（被动流）、经典蓝牙耳机（HFP 网关节点 `DEVPKEY_Device_BatteryLevel`）、**前行者 X87 键盘（33 字节查询帧）与 S9 鼠标（feature report 0x03，贝盈协议）**。罗技 Bolt 接收器（C548）+ MX Master 3S 已真机验证。本机电量可选，默认关。弱水时砂 2.4G 无电量通道，不再投入。
 
 任务栏贴片是原生子窗口 `Services/TaskbarPillWindow.cs`（`SetParent` 进 `Shell_TrayWnd`），不是 WinUI 覆盖窗。小组件仍用 `TransparentWindowSurface`；Win10 上因此没有 DWM 投影（BACKLOG **CR-57**，未做）。旧覆盖窗的白框、裁字、抢 Z 序在新贴片上已不存在。原理见 `dev/runtime-pitfalls.md` §16；§17 只对小组件。**拖动走 16ms 轮询，不靠鼠标捕获**——捕获对非前台窗口无效，§16.5.1。
 
@@ -50,6 +50,8 @@
 | 北通 T9（PID_5073）/ 鲲鹏20（PID_5191） | 厂商接口 0xFF00；T9 走 Col04 被动流 | T9 已真机验证；鲲鹏20 主动查询未验证 |
 | 寸渊影弑 SHADOW（3654:6901） | 0x11/0x01 通知；须发官方 `GetBasicInfo(0x09)` | 已打通（90% / 充电均核对过），默认关（§13） |
 | 盖世小鸡 G7 Pro CE（3537，usage 0xFFF0） | 心跳 `0F F2 00` 开 0x12 状态流，60 秒突发读一次 | 已打通，不依赖官方软件，默认开（§14） |
+| 前行者 X87 键盘（VID_0C45&PID_FEFE&MI_03） | 33 字节查询帧（0x20/0x01，校验和 [32]） | 已打通，真机 100%。MI_04 是 65 字节同 usage 陷阱，只能写 MI_03（protocols.md §7.1） |
+| 前行者 S9 鼠标（VID_372E&PID_1026） | feature report 0x03，贝盈 beiyin_uuid | 已打通，真机 72~73%。`0xFF06` 输出通道是死路（§7.2） |
 | 弱水时砂 2.4G（38FF:0001） | — | 无电量通道（protocols.md §3），不再投入 |
 | CHERRY PIXIU75（dongle 046A:01E4 / 有线 046A:01E2） | 64 字节块通道 0xFF1C，读块 0x1A（电量 + 充电位） | 已打通，真机 48%↔官方软件一致；插线 55% + 充电中（protocols.md §13.5） |
 | 派世 Pulsar X2 V2（VID_3554&PID_F508） | 17 字节帧 `0x08`，STATUS `0x03` / POWER `0x04` | 已打通，真机 20% + 3566 mV（protocols.md §14） |
@@ -100,7 +102,7 @@
 
 | 要动什么 | 去哪 |
 |---|---|
-| 迈从 / 雷柏 / 北通协议 | `Plugins/Mchose/`、`Plugins/Rapoo/`、`Plugins/Betop/`（规格在 protocols.md） |
+| 迈从 / 雷柏 / 北通 / 前行者协议 | `Plugins/Mchose/`、`Plugins/Rapoo/`、`Plugins/Betop/`、`Plugins/Eweadn/`（规格在 protocols.md） |
 | 离线判定 | `Plugins/OfflinePolicy.cs` + `BatteryPluginBase` 的 `MarkOffline` / `RequestOffline` / `RequestConfirm` |
 | 写入授权 | `AppSettings.PluginEnabled`；基类 `WritesEnabled`。设置页 `AddPluginRow` |
 | 新增品牌 | 新建插件继承 `BatteryPluginBase`。会写帧的默认关 |

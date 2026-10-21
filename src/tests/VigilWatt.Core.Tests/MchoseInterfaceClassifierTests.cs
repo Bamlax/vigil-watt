@@ -33,6 +33,9 @@ public sealed class MchoseInterfaceClassifierTests
     [InlineData(0x046D, 0xC548, @"\\?\hid#vid_046d&pid_c548&mi_01&col01#test", 0xFF00, 0x0001, 20, 20, 0, 0x11, MchoseInterfaceKind.None)]
     [InlineData(0x24AE, 0x1412, @"\\?\hid#vid_24ae&pid_1412&mi_01&col01#test", 0xFF00, 0x0002, 19, 19, 0, 0x07, MchoseInterfaceKind.None)]
     [InlineData(0x3554, 0xFA09, @"\\?\hid#vid_3554&pid_fa09&mi_01&col01#test", 0xFF02, 0x0002, 20, 20, 0, 0x13, MchoseInterfaceKind.None)]
+    // 本地适配的雷神与黑爵接口不可被迈从认领。
+    [InlineData(0x369B, 0x0234, @"\\?\hid#vid_369b&pid_0234&mi_01&col04#test", 0xFFA0, 0x0002, 64, 64, 0, 0xA0, MchoseInterfaceKind.None)]
+    [InlineData(0x3151, 0x4011, @"\\?\hid#vid_3151&pid_4011&mi_02#test", 0xFFFF, 0x0002, 0, 0, 65, 0x00, MchoseInterfaceKind.None)]
     // 长度既不是 20 也不到 60：不认
     [InlineData(0x3837, 0x201B, @"\\?\hid#vid_3837&pid_201b&mi_01&col01#test", 0xFF00, 0x0002, 32, 32, 0, 0x13, MchoseInterfaceKind.None)]
     public void ClassifyRoutesEachLinkToItsOwnKind(ushort vid, ushort pid, string path,

@@ -41,6 +41,8 @@
     <Compile Include="..\..\VigilWatt.Core\Plugins\Mchose\MchoseV9ProCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Mchose\MchoseInterfaceClassifier.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Rapoo\RapooCodec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Cherry\CherryCodec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Pulsar\PulsarCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Hecate\HecateCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Delux\DeluxCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Delux\DockChargeFilter.cs" />

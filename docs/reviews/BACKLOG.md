@@ -29,6 +29,8 @@
 | **CR-70** | 社区 PR #15 的 BLE 大改未纳入（`BleBatteryWatcher` +38/-22、`WatcherProps`、`DeviceKindGuesser`、`DeviceSourceInfo`、`SettingsPage`）。通用 GATT 路径已能读标准电池服务，故本轮只摘设备插件；蓝牙通道要单独一轮 | PR #15 | `open` |
 | **CR-71** | 社区 issue #12（任务栏贴片避让托盘图标）只有根因与修法描述，没有代码。`TaskbarLayout.Place` 现在固定贴托盘左侧，与 CR-39 同源 | issue #12、`Services/TaskbarLayout.cs:Place` | `open` |
 | **CR-72** | 社区 issue #11 现象 2（断电后死锁）未处理：涉及基类读实现，风险高于收益，需单独排期并配复现手段 | issue #11 | `open` |
+| **CR-73** | CHERRY 深度休眠时块通道全静音（读块超时），插件按"不判离线"处理；长期挂着会不会一直显示过期电量未实测 | `Plugins/Cherry/CherryPlugin.cs:Offline`（protocols.md §13.6） | `open` |
+| **CR-74** | CHERRY 2.4G 与有线是两台设备（`PIXIU75 Dongle` / `PIXIU 75`），显示名不同，历史库各占一行、互报离线；要合并得改设备 ID 口径 | `Plugins/Cherry/CherryPlugin.cs:BuildDisplayName`（protocols.md §13.6） | `open` |
 
 ## 重构候选（未做）
 
@@ -40,4 +42,4 @@
 | **D3** | 图表的坐标和命中，抽成纯函数 | `open` |
 | **D4** | 小组件的排序和宽度，抽出视图模型 | `open` |
 | **D5** | 设置页保存时的副作用，抽出视图模型 | `open` |
-| **D6** | 各插件「发帧再读到截止」的循环 | `open` |
+| **D6** | 各插件「发帧再读到截止」的循环（现有 Cherry `RequestBlock`、Pulsar `Query`、迈从、GANSS 各一套） | `open` |

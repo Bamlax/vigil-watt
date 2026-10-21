@@ -19,6 +19,11 @@ public sealed class TaskbarPillWindow : IDisposable
     private const string WindowTitle = "VigilWatt 任务栏电量";
     private const int FollowIntervalMs = 1000;
 
+    /// <summary>拖动轮询节拍；手停住时退到 <see cref="DragIdleTickMs"/>，见 docs/dev/runtime-pitfalls.md §16.5。</summary>
+    private const int DragTickMs = 16;
+    private const int DragIdleTickMs = 100;
+    private const int DragIdleTicks = 3;
+
     private const double MinHeightDip = 22, MaxHeightDip = 40;
     private const double TaskbarMarginDip = 6;
     private const double EdgeGapDip = 6;
@@ -36,6 +41,7 @@ public sealed class TaskbarPillWindow : IDisposable
 
     private readonly DispatcherQueue _dispatcher = DispatcherQueue.GetForCurrentThread();
     private readonly DispatcherQueueTimer _timer;
+    private readonly DispatcherQueueTimer _dragTimer;
 
     private IntPtr _hwnd, _taskbar, _tipHwnd;
     private IntPtr _memDc, _dib, _oldDib, _dibBits;
@@ -44,11 +50,16 @@ public sealed class TaskbarPillWindow : IDisposable
     private int _tipDibW, _tipDibH;
     private Gdi.Bitmap? _bitmap;
     private int _pillW, _pillH;
+
+    /// <summary>上次渲染用的缩放。缩放变了即使高度没变也要重画（字宽、圆角都按缩放算）。</summary>
+    private float _renderScale;
     private int _offsetPx;
     private int _offsetDpi;
     private uint _windowDpi;
     private bool _dragging;
     private int _dragStartCursor, _dragStartOffset;
+    private int _dragIdleTicks, _pollX, _pollY;
+    private bool _btnWasDown;   // 上轮询左键状态，用于检测按下边缘
     private bool _taskbarHorizontal = true;
     private PixelRect _taskbarRect, _trayRect;
     private int _refreshQueued;
@@ -60,11 +71,24 @@ public sealed class TaskbarPillWindow : IDisposable
     private string? _shownTipId;
     private bool _tipVisible;
     private bool _hoverArmed;
+    private readonly Action? _onInvalidate;
 
-    public TaskbarPillWindow()
+    /// <summary>窗口仍有效（未销毁）。供协调层快速路径判断。</summary>
+    public bool IsWindowValid => _hwnd != IntPtr.Zero && Native.IsWindow(_hwnd);
+
+    public TaskbarPillWindow(IntPtr taskbarHwnd, Action? onInvalidate = null)
     {
         _current = this;
+        _taskbar = taskbarHwnd;
+        _onInvalidate = onInvalidate;
         LoadOffsetFromSettings();
+
+        // 拖动轮询表常驻运行（20Hz）：Win11 任务栏 XAML 输入管理器会吃掉子窗口的鼠标消息，
+        // 不能靠 WM_LBUTTONDOWN 启动拖动，只能轮询检测（runtime-pitfalls.md §16.5.1）。
+        _dragTimer = _dispatcher.CreateTimer();
+        _dragTimer.Interval = TimeSpan.FromMilliseconds(DragIdleTickMs);
+        _dragTimer.Tick += (_, _) => OnDragTick();
+        _dragTimer.Start();
 
         EnsureWindow();
 
@@ -111,16 +135,35 @@ public sealed class TaskbarPillWindow : IDisposable
         Update();
     }
 
+    /// <summary>重置到默认位置：offset=0，按当前 DPI 绑定。</summary>
+    public void ResetPosition()
+    {
+        uint dpi = TaskbarDpi();
+        if (dpi == 0) dpi = 96;
+        _offsetPx = 0;
+        _offsetDpi = (int)dpi;
+        var s = App.Services.Settings;
+        s.TaskbarBatteryOffsetX = 0;
+        s.TaskbarBatteryOffsetDpi = _offsetDpi;
+        s.Save();
+        EndDrag();
+        _needRender = true;
+        Update();
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
 
         _timer.Stop();
+        _dragTimer.Stop();
+        EndDrag();
         App.Services.Manager.DeviceUpdated -= OnDeviceUpdated;
         App.Services.Manager.DevicesChanged -= OnDevicesChanged;
         HideTip();
         ReleaseWindow();
+        _taskbar = IntPtr.Zero;
 
         if (ReferenceEquals(_current, this)) _current = null;
     }
@@ -219,7 +262,6 @@ public sealed class TaskbarPillWindow : IDisposable
     /// </summary>
     private void AttachToTaskbar()
     {
-        _taskbar = Native.FindWindowW(Native.TaskbarClassName, null);
         if (_taskbar == IntPtr.Zero || _hwnd == IntPtr.Zero) return;
 
         Native.SetParent(_hwnd, _taskbar);
@@ -236,6 +278,12 @@ public sealed class TaskbarPillWindow : IDisposable
         {
             Interlocked.Exchange(ref _rebuildQueued, 0);
             if (_disposed) return;
+            if (_onInvalidate != null)
+            {
+                _onInvalidate();
+                return;
+            }
+            EndDrag();
             ReleaseWindow();
             _taskbarRect = default;
             _trayRect = default;
@@ -247,13 +295,13 @@ public sealed class TaskbarPillWindow : IDisposable
 
     private void ReleaseWindow()
     {
+        EndDrag();
         ReleaseTipWindow();
         if (_hwnd != IntPtr.Zero)
         {
             if (Native.IsWindow(_hwnd)) Native.DestroyWindow(_hwnd);
             _hwnd = IntPtr.Zero;
         }
-        _taskbar = IntPtr.Zero;
         _windowDpi = 0;
         ReleaseDib();
         _bitmap?.Dispose();
@@ -287,17 +335,24 @@ public sealed class TaskbarPillWindow : IDisposable
         EnsureWindow();
         if (_hwnd == IntPtr.Zero) return;
 
-        // Explorer 重启会换一个任务栏窗口，旧 HWND 失效，要重新挂
-        var taskbar = Native.FindWindowW(Native.TaskbarClassName, null);
-        if (taskbar == IntPtr.Zero) return;
-        if (taskbar != _taskbar || Native.GetParent(_hwnd) != taskbar)
+        // 协调层传入的任务栏已失效：通知上层重建，自己不再尝试找新任务栏
+        if (_taskbar == IntPtr.Zero || !Native.IsWindow(_taskbar))
+        {
+            _onInvalidate?.Invoke();
+            return;
+        }
+
+        // Explorer 重启或父窗口被拆：重新挂
+        if (Native.GetParent(_hwnd) != _taskbar)
             AttachToTaskbar();
 
         // 任务栏 DPI 变了：分层子窗口坐标空间跟创建时绑死，只重算矩形不够
         uint dpi = TaskbarDpi();
-        if (_windowDpi != 0 && dpi != 0 && dpi != _windowDpi)
+        if (dpi == 0) return;   // 句柄正在重建：这一拍别按 100% 算尺寸，等下一拍
+        if (_windowDpi == 0) _windowDpi = dpi;   // 建窗时没读到 DPI：以当前为基准，否则之后的变化永远检测不到
+        if (dpi != _windowDpi)
         {
-            RequestRebuild();
+            _onInvalidate?.Invoke();
             return;
         }
 
@@ -310,27 +365,32 @@ public sealed class TaskbarPillWindow : IDisposable
             _taskbarRect = rect;
             _trayRect = tray;
             _taskbarHorizontal = TaskbarLayout.IsHorizontal(rect);
-            int h = TaskbarLayout.PillHeight(rect, Scale, TaskbarMarginDip, MinHeightDip, MaxHeightDip);
-            if (h != _pillH)
-            {
-                _pillH = h;
-                _needRender = true;
-            }
+        }
+
+        // 尺寸每拍按当前矩形与当前缩放重算，不能只在"矩形变了"时算：换线（Type-C / 扩展坞）后
+        // 缩放会变而任务栏像素尺寸可能不变，那时贴片会一直用旧尺寸。
+        float scale = dpi / 96f;
+        int height = TaskbarLayout.PillHeight(rect, scale, TaskbarMarginDip, MinHeightDip, MaxHeightDip);
+        if (height != _pillH || scale != _renderScale)
+        {
+            Log.Debug($"任务栏贴片：尺寸重算 {_pillW}×{height}，scale={scale:0.00}，任务栏={rect.Width}×{rect.Height}");
+            _pillH = height;
+            _renderScale = scale;
+            _needRender = true;
         }
 
         if (_needRender || _bitmap == null) Render();
         ApplyPosition();
     }
 
-    /// <summary>找任务栏与托盘矩形（物理像素、屏幕坐标）；<paramref name="hidden"/> 表示自动隐藏已收起。</summary>
-    private static bool TryGetTaskbar(out PixelRect taskbar, out PixelRect tray, out bool hidden)
+    /// <summary>读当前任务栏与托盘矩形（物理像素、屏幕坐标）；<paramref name="hidden"/> 表示自动隐藏已收起。</summary>
+    private bool TryGetTaskbar(out PixelRect taskbar, out PixelRect tray, out bool hidden)
     {
         taskbar = default;
         tray = default;
         hidden = false;
 
-        var hwnd = Native.FindWindowW(Native.TaskbarClassName, null);
-        if (hwnd == IntPtr.Zero || !Native.GetWindowRect(hwnd, out var rect)) return false;
+        if (_taskbar == IntPtr.Zero || !Native.GetWindowRect(_taskbar, out var rect)) return false;
 
         taskbar = new PixelRect(rect.Left, rect.Top, rect.Width, rect.Height);
         if (TaskbarLayout.IsTaskbarHidden(taskbar))
@@ -340,7 +400,7 @@ public sealed class TaskbarPillWindow : IDisposable
         }
 
         // 托盘找不到不算失败：退回用任务栏自身边缘定位，贴片照样显示
-        var trayHwnd = Native.FindWindowExW(hwnd, IntPtr.Zero, Native.TrayNotifyClassName, null);
+        var trayHwnd = Native.FindWindowExW(_taskbar, IntPtr.Zero, Native.TrayNotifyClassName, null);
         if (trayHwnd != IntPtr.Zero && Native.GetWindowRect(trayHwnd, out var trayRect))
             tray = new PixelRect(trayRect.Left, trayRect.Top, trayRect.Width, trayRect.Height);
         return true;
@@ -512,10 +572,10 @@ public sealed class TaskbarPillWindow : IDisposable
     private static IntPtr WndProc(IntPtr hwnd, uint msg, IntPtr wParam, IntPtr lParam)
     {
         var self = _current;
-        if (self != null)
+        if (self == null)
+            return Native.DefWindowProcW(hwnd, msg, wParam, lParam);
+        switch (msg)
         {
-            switch (msg)
-            {
                 case Native.WM_LBUTTONDOWN:
                     self.OnLButtonDown();
                     return IntPtr.Zero;
@@ -531,6 +591,15 @@ public sealed class TaskbarPillWindow : IDisposable
                 case Native.WM_MOUSELEAVE:
                     self.OnMouseLeave();
                     return IntPtr.Zero;
+                case Native.WM_MOUSEACTIVATE:
+                {
+                    // 让 DefWindowProcW 先处理：子窗口默认会把消息发给父窗口（Shell_TrayWnd）。
+                    // 只有父窗口要"吃掉消息"时才干预，否则保留原返回值（支持双击等正常行为）。
+                    int ret = Native.DefWindowProcW(hwnd, msg, wParam, lParam).ToInt32();
+                    if (ret == Native.MA_ACTIVATEANDEAT)
+                        return (IntPtr)Native.MA_NOACTIVATE;
+                    return (IntPtr)ret;
+                }
                 case Native.WM_LBUTTONUP:
                     self.OnLButtonUp();
                     return IntPtr.Zero;
@@ -547,12 +616,13 @@ public sealed class TaskbarPillWindow : IDisposable
                     self._dispatcher.TryEnqueue(self.Update);
                     return IntPtr.Zero;
             }
-        }
         return Native.DefWindowProcW(hwnd, msg, wParam, lParam);
     }
 
     private void OnLButtonDown()
     {
+        if (_dragging) return;   // 轮询可能已经先检测到并启动了
+
         HideTip();
         _hoverId = null;
         _hoverArmed = false;
@@ -565,10 +635,94 @@ public sealed class TaskbarPillWindow : IDisposable
         _offsetDpi = (int)dpi;
 
         _dragging = true;
-        Native.SetCapture(_hwnd);
+        _dragStartOffset = visible;
+
         var p = Native.GetCursorPos();
         _dragStartCursor = _taskbarHorizontal ? p.X : p.Y;
-        _dragStartOffset = visible;
+        _pollX = p.X;
+        _pollY = p.Y;
+        _dragIdleTicks = 0;
+
+        _dragTimer.Interval = TimeSpan.FromMilliseconds(DragTickMs);
+    }
+
+    /// <summary>
+    /// 常驻轮询（20Hz 起步，拖动中切 60Hz）：Win11 任务栏 XAML 会吃掉子窗口鼠标消息，
+    /// 不能靠 WM_LBUTTONDOWN 启动拖动，只能直接读全局按键状态（runtime-pitfalls.md §16.5.1）。
+    /// </summary>
+    private void OnDragTick()
+    {
+        if (_disposed) return;
+
+        bool btnDown = (Native.GetAsyncKeyState(Native.VK_LBUTTON) & 0x8000) != 0;
+        var p = Native.GetCursorPos();
+
+        if (!_dragging)
+        {
+            // 检测按下边缘：上一轮没按、这一轮按了，且光标落在贴片内 → 启动拖动
+            if (btnDown && !_btnWasDown && IsCursorInPill(p))
+            {
+                OnLButtonDown();
+            }
+        }
+        else
+        {
+            if (!btnDown)
+            {
+                EndDrag();
+                _btnWasDown = false;
+                return;
+            }
+
+            bool moved = p.X != _pollX || p.Y != _pollY;
+            _pollX = p.X;
+            _pollY = p.Y;
+
+            // 手停住就退到 20Hz：只有真在拖时才需要 60Hz，松手最多晚 50ms 发现
+            if (!moved)
+            {
+                if (++_dragIdleTicks >= DragIdleTicks)
+                    _dragTimer.Interval = TimeSpan.FromMilliseconds(DragIdleTickMs);
+                _btnWasDown = true;
+                return;
+            }
+
+            _dragIdleTicks = 0;
+            _dragTimer.Interval = TimeSpan.FromMilliseconds(DragTickMs);
+
+            int next = _dragStartOffset + ((_taskbarHorizontal ? p.X : p.Y) - _dragStartCursor);
+            if (next == _offsetPx)
+            {
+                _btnWasDown = true;
+                return;
+            }
+            _offsetPx = next;
+            ApplyPosition();
+        }
+
+        _btnWasDown = btnDown;
+    }
+
+    /// <summary>光标当前是否落在贴片矩形内（屏幕坐标）。</summary>
+    private bool IsCursorInPill(Native.POINT p)
+    {
+        if (_hwnd == IntPtr.Zero || !Native.GetWindowRect(_hwnd, out var r)) return false;
+        return p.X >= r.Left && p.X < r.Right && p.Y >= r.Top && p.Y < r.Bottom;
+    }
+
+    /// <summary>结束拖动：偏移真变了才写盘（单击一下不该产生一次磁盘写）。</summary>
+    private void EndDrag()
+    {
+        if (!_dragging) return;
+        _dragging = false;
+        _dragTimer.Interval = TimeSpan.FromMilliseconds(DragIdleTickMs);
+
+        if (_offsetPx == _dragStartOffset) return;
+        var s = App.Services.Settings;
+        s.TaskbarBatteryOffsetX = _offsetPx;
+        s.TaskbarBatteryOffsetDpi = _offsetDpi;
+        s.Save();
+        Log.Debug($"任务栏贴片：拖动结束，offset={_offsetPx} dpi={_offsetDpi}");
     }
 
     private void OnMouseMove(IntPtr lParam)
@@ -781,7 +935,7 @@ public sealed class TaskbarPillWindow : IDisposable
         if (_hwnd == IntPtr.Zero) return default;
         var mon = Native.MonitorFromWindow(_hwnd, Native.MONITOR_DEFAULTTONEAREST);
         if (mon == IntPtr.Zero) return default;
-        var info = new Native.MONITORINFO { cbSize = (uint)Marshal.SizeOf<Native.MONITORINFO>() };
+        var info = new Native.MONITORINFOEX { cbSize = (uint)Marshal.SizeOf<Native.MONITORINFOEX>() };
         if (!Native.GetMonitorInfoW(mon, ref info)) return default;
         var r = info.rcWork;
         return new PixelRect(r.Left, r.Top, r.Width, r.Height);
@@ -795,21 +949,11 @@ public sealed class TaskbarPillWindow : IDisposable
         _shownTipId = null;
     }
 
-    private void OnLButtonUp()
-    {
-        if (!_dragging) return;
-        _dragging = false;
-        Native.ReleaseCapture();
-
-        var s = App.Services.Settings;
-        s.TaskbarBatteryOffsetX = _offsetPx;
-        s.TaskbarBatteryOffsetDpi = _offsetDpi;
-        s.Save();
-    }
+    private void OnLButtonUp() => EndDrag();
 
     private void OnDoubleClick()
     {
-        if (_dragging) OnLButtonUp();
+        if (_dragging) EndDrag();
         TrayService.ShowMainWindow();
     }
 

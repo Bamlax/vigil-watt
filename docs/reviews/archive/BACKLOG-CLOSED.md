@@ -7,6 +7,7 @@
 
 | 编号 | 结论 |
 |---|---|
+| CR-73 | 贴片拖动改为轮询驱动（Win11 任务栏 XAML 吃掉子窗口鼠标消息）。`WM_MOUSEACTIVATE` 让 DefWindowProc 先处理，只在父窗口要吃消息时干预；fallback 为常驻 10Hz 轮询（拖动中 60Hz）。设置页新增「重置贴片位置」按钮。见 runtime-pitfalls.md §16.5.1 |
 | CR-62 | 空槽负缓存 5 分钟 + 每轮最多补探 1 槽；空接收器也启只读监听。见 code-flow.md §2.1 |
 | CR-01 | 罗技补上写入闸门、熔断和默认关闭 |
 | CR-02 | 北通探测在写帧前检查写入开关 |
@@ -59,6 +60,9 @@
 | D8 | 充电状态映射抽成 `ChargingStateMap` |
 | D9 | 删除罗技 `StableHash` 直通 |
 | D10 | 作废。独立写入许可被「插件开关即授权」取代 |
+| CR-75 | 拔出后 HID++ 通知空转：`BatteryPluginBase.StartPassiveListen` 与 `LogitechPlugin.EnsureListening` 按"连续 3 次读取在 100ms 内返回 null"判定句柄失效，退避 200ms。正常静音仍等满 500ms，节拍不受影响 |
+| CR-76 | 与 CR-75 同一修法落地。Inphic/Hecate/Delux 的读窗口 `continue` 有 deadline 兜住（不无限循环），未改 |
+| CR-77 | `MarkOffline` 注释改为"插件内软离线的唯一落地点"，并注明拔出走 `ReconcileRemovals`（不该盖 `LastUpdated`）。行为本来就对，是注释过满 |
 
 ## wontfix
 
@@ -71,3 +75,4 @@
 | CR-44 | 在旧 WinUI 贴片上 `WS_EX_LAYERED` 测过无效。原生贴片后来用的是另一条合成路径，不要把这条结论套过去 |
 | CR-51 | 日志按用户要求一天一个文件，大小靠保留天数限制 |
 | CR-64 | 反复打开主窗口抬高的是工作集，不是泄漏。判泄漏只看私有提交。见 `memory-growth-2026-10-12.md` |
+| CR-78 | 原判断有误：`RunExclusiveAsync` 已 catch `WaitAsync` 的 `ObjectDisposedException` 并 return，`Release` 也有 catch。剩下的 `Detach` 与在跑 `Poll` 并发由插件内 try/catch 兜住，退出时不影响用户 |

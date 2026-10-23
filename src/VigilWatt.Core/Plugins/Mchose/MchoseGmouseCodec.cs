@@ -1,18 +1,16 @@
 namespace VigilWatt.Core.Plugins.Mchose;
 
 /// <summary>
-/// 功 能： 迈从 Gmouse 主动查询协议（G3 V2 等）的纯帧编解码，不碰句柄、不写日志。
+/// 功 能： 迈从 Gmouse 主动查询协议（G3 V2）的纯帧编解码，不碰句柄、不写日志。
 /// 2026/10/20 Sunshine
-/// 协议逆向自官方 M HUB 网页端 /gmouse 与社区 aliezzzz/mchose-battery；细节见 docs/hardware/mchose.md §4。
-/// 与 K7（0x4D 帧 / 0x0900 命令）是两条完全不同的链路：Gmouse 是 65 字节 <c>00 55 30 A5…</c> 查询帧，
-/// 应答前缀 <c>AA 30</c>，靠 usagePage 0xFF01 / usage 0x10 的完整指纹与 V2 世代的被动 E2 链路区分。
+/// 与 K7（0x4D/0x0900）是两条独立链路；接口指纹、帧格式与未验证边界见 docs/hardware/mchose.md §4。
 /// </summary>
 public static class MchoseGmouseCodec
 {
     /// <summary>厂 ID（迈从新世代）。</summary>
     public const ushort VendorId = 0x3837;
 
-    /// <summary>Gmouse 协议族接收器 PID（G3 V2 = 0x4245；同族还有 0xA8A5 / 0xA8A4）。</summary>
+    /// <summary>G3 V2 接收器 PID。来源项目里 0xA8A5 / 0xA8A4 是 <b>VID</b> 不是 PID，本实现只认这一组。</summary>
     public const ushort PidG3V2 = 0x4245;
 
     /// <summary>命令通道的 usagePage / usage（USB 路径里是 <c>mi_02</c>，无 COL 后缀）。</summary>
@@ -25,11 +23,7 @@ public static class MchoseGmouseCodec
     /// <summary>Windows 的 ReadInput 缓冲可能带/不带 report ID 前缀，两种偏移都试（与其它解析器一致）。</summary>
     private static readonly int[] Offsets = { 0, 1 };
 
-    /// <summary>
-    /// 接口是不是 Gmouse 的命令通道。判据是**完整指纹**（厂 ID + PID + 厂商用法 + 双方向的 65 字节），
-    /// 不做"同 VID 就试试"的推断：迈从同厂 ID 下还有 20 字节的键盘会话通道、64 字节的 K7 命令通道
-    /// 和 ≥60 字节的 V2 鼠标被动 E2 通道，判错会把 Gmouse 查询帧发到别的设备上。
-    /// </summary>
+    /// <summary>接口是不是 Gmouse 命令通道：完整指纹（VID+PID+厂商用法+双向 65 字节），判错会把帧发到别的设备上。</summary>
     public static bool IsSupportedInterface(ushort vendorId, ushort productId,
         ushort usagePage, ushort usage, ushort inputLength, ushort outputLength)
         => vendorId == VendorId
@@ -55,10 +49,7 @@ public static class MchoseGmouseCodec
         return report;
     }
 
-    /// <summary>
-    /// 解析 Gmouse 电量应答。应答前缀 <c>AA 30</c>（可能带 report ID 前缀，偏移 0 或 1）；
-    /// 电量在 <c>[offset+8]</c>、充电标志在 <c>[offset+9]</c>（0=未充电，非 0=充电中）。
-    /// </summary>
+    /// <summary>解析电量应答：前缀 <c>AA 30</c>（偏移 0 或 1），电量 <c>[off+8]</c>、充电 <c>[off+9]</c>（非 0 即充电中）。</summary>
     public static bool TryParse(ReadOnlySpan<byte> report, out int percent, out bool charging)
     {
         percent = 0;
@@ -78,9 +69,6 @@ public static class MchoseGmouseCodec
         return false;
     }
 
-    /// <summary>
-    /// 0 是"未就绪/占位"（dongle 没连上设备时的常见值），**不能**当 1% 报出去；
-    /// 1..100 一律接受——鼠标真能到 1%，拒掉它就会漏掉低电量提醒。
-    /// </summary>
+    /// <summary>0 是"未就绪"占位（推断，见 mchose.md §4.5）；1..100 一律接受——鼠标真能到 1%，拒掉会漏掉低电量提醒。</summary>
     private static bool IsPlausiblePercent(int percent) => percent is >= 1 and <= 100;
 }

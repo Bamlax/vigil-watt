@@ -38,6 +38,7 @@
 | **CR-91** | Centurion 无应答时最坏 4×1500ms 读 + 500ms 写 ≈ 6.5 秒堵在 `Poll` 里（正常 8–13ms），休眠/关机期间会拖长这一轮插件 pass；未实测对其它插件轮询节奏的影响 | `Plugins/Logitech/LogitechPlugin.cs:TryReadCenturionBattery`（logitech.md §2） | `open` |
 | **CR-92** | 型号归一规则（`PRO X 2` → `PRO X 2 LIGHTSPEED`）写在通用 BLE 层；且只有蓝牙被归一，2.4G 仍取 `info.Product`，两条通道显示名可能不一致 | `Ble/ClassicDeviceName.cs:NormalizeBluetoothHeadsetName`、`Plugins/Logitech/LogitechPlugin.cs:BuildDisplayName` | `open` |
 | **CR-93** | 基类 `AttachAsync` / `Poll` / `ReconcileRemovals` 是 public 非 virtual，`LogitechPlugin` 只能用 `new` 隐藏，靠类重新声明 `IBatteryPlugin` 做接口重实现才生效；以基类静态类型调用会静默跳过 HID++ 分支。建议基类这三个改 virtual + 子类 override | `Plugins/BatteryPluginBase.cs:AttachAsync`、`Plugins/Logitech/LogitechPlugin.cs`（review-standard.md §2 R2） | `open` |
+| **CR-94** | 迈从 G3 V2 的 `mi_01&col05`（`0xFF06/0x0002`，64/64）不是命令通道，却按"≥60 字节只走鼠标"落 `MouseV2` 兜底：每 15 秒发现拍点被写 1 条 `0x11/0x06` 触发帧并阻塞约 6 秒（3 秒被动监听 ×2）。建议对已知 Gmouse PID 的非命令厂商接口返回 `None`，或只被动听不写 | `Plugins/Mchose/MchoseInterfaceClassifier.cs:Classify`、`Plugins/Mchose/MchosePlugin.cs:TryMouseV2`；接口地图见 `docs/hardware/mchose.md` §4.1、§4.5 | `open` |
 
 ## 重构候选（未做）
 

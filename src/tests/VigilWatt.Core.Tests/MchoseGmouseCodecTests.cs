@@ -6,8 +6,7 @@ namespace VigilWatt.Core.Tests;
 /// <summary>
 /// 功 能： 迈从 Gmouse 主动查询协议（G3 V2，3837:4245）编解码的回归测试。
 /// 2026/10/20 Sunshine
-/// 查询帧与应答前缀来自官方 M HUB 网页端 /gmouse 与社区 aliezzzz/mchose-battery；
-/// 真机 G3 V2（3837:4245）验证读到 89% 未充电。帧结构见 docs/hardware/mchose.md §4。
+/// 帧来自官方 M HUB /gmouse 与社区 aliezzzz/mchose-battery；真机读到 89% 未充电，见 mchose.md §4。
 /// </summary>
 public sealed class MchoseGmouseCodecTests
 {

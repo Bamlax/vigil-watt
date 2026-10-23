@@ -30,7 +30,7 @@ public sealed class MchosePlugin : BatteryPluginBase
     /// <summary>K7 V2 Ultra+：64 字节 output 0x4D，0x0900 查询 + 0x0600 事件（帧与判据见 <see cref="MchoseK7Codec"/>）。</summary>
     private const string ProtocolMouseK7 = "mouse-k7";
 
-    /// <summary>Gmouse 世代鼠标（G3 V2 等）：65 字节主动查询帧（55 30 A5…），判据与帧见 <see cref="MchoseGmouseCodec"/>。</summary>
+    /// <summary>Gmouse 世代鼠标（G3 V2）：65 字节主动查询帧（55 30 A5…），判据与帧见 <see cref="MchoseGmouseCodec"/>。</summary>
     private const string ProtocolGmouse = "gmouse";
 
     /// <summary>V9 Pro 耳机：64 字节固定查询帧（帧结构与判据见 <see cref="MchoseV9ProCodec"/>）。同品牌另一条链路，与键鼠判据完全独立。</summary>
@@ -707,18 +707,14 @@ public sealed class MchosePlugin : BatteryPluginBase
     };
 
     // ══════════════════════════════════════════════════════════════════
-    //  Gmouse 主动查询（3837:4245 等，usagePage 0xFF01/usage 0x10，65 字节）
+    //  Gmouse 主动查询（3837:4245，usagePage 0xFF01/usage 0x10，65 字节）
     //  帧格式与字段表见 MchoseGmouseCodec；依据是官方 M HUB 网页端 /gmouse。
     // ══════════════════════════════════════════════════════════════════
 
     /// <summary>Gmouse 查询的应答等待窗口。实测 dongle 回包在 1 秒内。</summary>
     private static readonly TimeSpan GmouseReplyWindow = TimeSpan.FromSeconds(1.2);
 
-    /// <summary>
-    /// Gmouse 探测：发一条电量查询帧（见 <see cref="MchoseGmouseCodec"/>），最多 2 次。
-    /// 与 mouse-v2 的被动 E2 不同，Gmouse 没有自发推送，必须主动查询。
-    /// 写失败直接返回 null（说明不是这条通道）；拿到电量才认领。
-    /// </summary>
+    /// <summary>Gmouse 探测：主动查询最多 2 次，拿到电量才认领（它没有被动推送可等）。</summary>
     private static (string Protocol, int? Percent, ChargingState Charging)? TryGmouse(HidDeviceHandle handle)
     {
         if (!IsWritesEnabled(SettingsKey))
@@ -733,10 +729,7 @@ public sealed class MchosePlugin : BatteryPluginBase
         return result.HasValue ? (ProtocolGmouse, result.Value.Percent, result.Value.Charging) : null;
     }
 
-    /// <summary>
-    /// 写 Gmouse 查询帧并等响应。响应前缀 <c>AA 30</c>，电量在 <c>[offset+8]</c>、充电在 <c>[offset+9]</c>。
-    /// 无应答只在状态变化时记一条 Debug：鼠标不在位时每 15 秒重探一次，逐次记录会把日志刷满。
-    /// </summary>
+    /// <summary>写查询帧等应答；无应答只在状态变化时记一条 Debug（鼠标不在位时每 15 秒重探，逐次记会刷满日志）。</summary>
     private static (int Percent, ChargingState Charging)? QueryGmouse(HidDeviceHandle handle)
     {
         for (int attempt = 1; attempt <= 2; attempt++)
@@ -762,7 +755,8 @@ public sealed class MchosePlugin : BatteryPluginBase
 
                 Log.ResetOnce(LogKey(handle, LogKeyGmouseSilent));
                 Log.Info($"迈从 Gmouse 电量查询: 电量={percent} 充电={charging} 原始={Log.Hex(input)}");
-                return (percent, charging ? ChargingState.Charging : ChargingState.Discharging);
+                // 走公共收尾规则：100% 且未充电判 Full，与 K7/V1/QHW 口径一致
+                return (percent, ChargingStateMap.FromChargingFlag(charging, percent));
             }
         }
 

@@ -16,6 +16,7 @@
 | MCHOSE G87 旧代 dongle（report `0x13`） | 官方 M HUB 的会话与电量交互；通过官方软件抓包和 dongle 实机观测确认帧结构、校验、查询和推送。 | 按抓包与实机样本实现；本机 G87 已验证。 | 官方软件交互是协议依据，不表示引用其代码。具体帧与未定语义见 [protocols.md](protocols.md)。 |
 | MCHOSE QHW（新代 dongle） | [MCHOSE M HUB WEB](https://www.mchose.com.cn/#/home) 前端 JS 中的 `QhwCmdQueueItem`、命令表及 CZ 相关脚本。 | 按官方前端协议实现备用路径；适用于 `0x3837` 世代 dongle。当前用户设备 `41E4:2001` 不适用。 | 官方资料，非开源代码复用。入口与设备范围见 [protocols.md](protocols.md)。 |
 | Logitech HID++ 电量 | Logitech HID++ 1.0 / 2.0 的设备发现与电池特征；实时电量通知行为与 Logi Battery Dashboard 同源。 | 本项目自行实现 HID++ 报文与特征解析；Bolt + MX Master 3S 已真机验证。 | 现有协议手册未记录外部代码复用；Logi Battery Dashboard 只作为行为 / 协议线索。实现细节见 [protocols.md](protocols.md)。 |
+| Logitech PRO X 2 LIGHTSPEED Centurion | [HeadsetControl](https://github.com/Sapd/HeadsetControl/blob/master/lib/devices/logitech_gpro_x2_lightspeed.hpp)（设备/PID、报文形态与 legacy 电池查询）；[LogitechBatteryMonitor](https://github.com/Recopec/LogitechBatteryMonitor)（独立协议与充电字段实机报告）。 | 按公开协议事实自行实现 64 字节只读电池查询；2026-10-23 用户真机日志与截图确认 `046D:0AF7` 查询读数、插拔充电状态、状态不变时列表更新时间同步。 | 两参考仓库标注 GPL-2.0；未复制代码。充电字段状态存在来源差异，`0x03` 暂不解释；测试未留原始响应字节；2026-10-23 诊断版关闭罗技开关后确认插件卸载、设备与会话释放，约两分钟内没有新的 Centurion 查询记录，代码写入闸门同时核验通过（未做 USB 总线级抓包）。蓝牙模式由经典蓝牙监视器读取 Windows HFP 设备节点电量，2026-10-23 真机读数 60% 与 Windows 设置一致；该路径不属于 Centurion 协议。 |
 | Rapoo V2 `status-report7` | [pedro3z0/rapoo-software-linux](https://github.com/pedro3z0/rapoo-software-linux)（基于 A HUB 1.0.19 逆向及官方 Web 驱动抓包）；[D3m0nZOnFire/mousectl](https://github.com/D3m0nZOnFire/mousectl)（VT3 PRO 一代实测）。 | 参考协议分析后自行实现被动心跳解析；本机 VT3 二代 `24AE:1412` 已验证，部分状态以本机样本为准。 | `rapoo-software-linux` 标注 MIT；`mousectl` 的许可需以其仓库当前声明为准。两来源设备型号与本机不同，不能直接替代本机验证。 |
 | Betop / 北通厂商接口 | [oitsukiii/betop-battery](https://github.com/oitsukiii/betop-battery) 的 `docs/protocol.md`：对北通官方 Electron 客户端做互操作性分析，不含厂商代码。 | 参考协议文档实现；本机 T9 被动流已验证。 | 项目标注 MIT；本项目验证情况与限制见 [protocols.md](protocols.md)。 |
 | Inphic ZHEN `report 0x03` | 英菲克官方 ZHEN 网页驱动的 WebHID 行为、驱动显示与本机被动输入样本。 | 只读解析输入 report `0x03`，充放电状态经实机接线验证；不发送网页驱动的 report `0x04`。 | 基于官方行为和本机样本自行实现；未记录外部代码复用。见 [protocols.md](protocols.md)。 |
@@ -43,3 +44,4 @@
 - 新增协议时，记录最初依据、参考项目链接、许可声明、与本机验证的区别，并链接到 [protocols.md](protocols.md) 的详细规格。
 - 若只参考公开协议分析，明确写“参考协议说明，自行实现”；只有确认复用了代码时才写代码来源，并记录许可与归属。
 - 发现来源许可、链接或型号信息变化时更新本文；不确定的许可标为“需核对”，不要推断。
+

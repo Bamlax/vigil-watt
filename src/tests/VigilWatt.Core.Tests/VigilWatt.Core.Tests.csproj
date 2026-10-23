@@ -57,6 +57,7 @@
     <Compile Include="..\..\VigilWatt.Core\Plugins\Eweadn\EweadnKeyboardCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Eweadn\EweadnMouseCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Plugins\Logitech\HidppCodec.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Plugins\Logitech\CenturionCodec.cs" />
     <Compile Include="..\..\VigilWatt.Core\Ble\ClassicDeviceName.cs" />
     <Compile Include="..\..\VigilWatt.Core\Ble\WatcherProps.cs" />
     <Compile Include="..\..\VigilWatt.Core\Models\DeviceKind.cs" />
@@ -96,3 +97,4 @@
   </ItemGroup>
 
 </Project>
+

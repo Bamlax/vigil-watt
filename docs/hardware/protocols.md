@@ -13,6 +13,7 @@
 | 迈从 MCHOSE | K7 V2 Ultra+ 鼠标 | `3837:1018` | [mchose.md](mchose.md) | 贡献者真机 |
 | 迈从 MCHOSE | V9 Pro 耳机 | `291D:385D` | [mchose-v9-pro.md](mchose-v9-pro.md) | 贡献者真机 |
 | 罗技 Logitech | Bolt C548 + MX Master 3S | `046D` | [logitech.md](logitech.md) | 本机验证 |
+| 罗技 Logitech | PRO X 2 LIGHTSPEED | `046D:0AF7` | [logitech.md](logitech.md) | 已实现，2.4G 与蓝牙真机验证通过 |
 | 雷柏 Rapoo | VT3 二代 | `24AE:1412` | [rapoo.md](rapoo.md) | 本机验证 |
 | 北通 BETOP | T9 / 鲲鹏20 | `20BC:5073` / `5191` | [betop.md](betop.md) | T9 本机验证；鲲鹏20 未验 |
 | 英菲克 ZHEN | 接收器 | `1D57:FA65` | [inphic.md](inphic.md) | 本机验证 |
@@ -47,3 +48,4 @@
 - 配置中心版本清单：`https://cdn.mchose.com.cn/configCenter/config/global.json`（base64 zip，内含 keyboardConfig 哈希）
 - 桌面版 MCHOSE HUB：`https://cdn.mchose.com.cn/MCHOSE_HUB_installer.zip`（Electron，未验证是否支持 41E4 老款）
 - 官方设备表（打包在主 JS 里）：G87 V2 有线 = 0x3837:0x2015，官方通用 dongle = 0x3837:0x3033；0x41E4 世代 = Ace60/Ace68/Jet75/Mix87/Zero75 等有线型号 + 老款 dongle（0x41E4:0x2001 不在官方表里，但协议同代）
+

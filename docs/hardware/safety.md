@@ -50,7 +50,7 @@
 |---|---|---|---|
 | 迈从 | `PluginEnabled["Mchose"]` | **false** | dongle 协议未破解，探测写入可能干扰设备，故默认关；开插件即授权写帧。**一个开关管键盘、鼠标、V9 Pro 耳机、K7 鼠标四类设备**（品牌级，`AGENTS.md` §9） |
 | 北通 | `PluginEnabled["Betop"]` | **true** | 查询是官方客户端同款只读命令（cmd=0x5），风险低，故默认开 |
-| 罗技 | `PluginEnabled["Logitech"]` | **false** | 发现与读数**全靠写帧**；不继承基类，故自建闸门（`HidppIO.WritesAllowed`）+ 熔断 + 同一张递增退避表（`Plugins/WriteBackoff.cs`） |
+| 罗技 | `PluginEnabled["Logitech"]` | **false** | Centurion 新路径继承 `BatteryPluginBase`，复用公共写入闸门、读数过滤和熔断退避；HID++ 历史路径保留 `HidppIO.WritesAllowed` 与专用会话处理 |
 | 雷柏 | 无（纯被动） | — | `WritesEnabled => false` + `ProbeWrites => false`，零写入 |
 | 黑爵 | `PluginEnabled["Ajazz"]` | **false** | 3151:4011 已验证 F7 状态查询；见 `ak870-ml903.md` |
 | 雷神 | `PluginEnabled["Thunderobot"]` | **false** | 369B:0234 官方 02 设备信息查询；见 `ak870-ml903.md` |
@@ -74,3 +74,4 @@
 1. 键盘/鼠标断连：拔 dongle → 等 10 秒 → 插回；键盘关机再开机。
 2. 仍不行：键盘插 USB 线直连测试（能识别 = 硬件没坏，是配对丢了）→ 重新配对（迈从一般是 Fn+Esc 长按，见型号说明书）。
 3. dongle 假死（官方软件也连不上）：关掉所有可能持有会话的程序（本应用、浏览器里开着的 M HUB WEB、官方桌面版），还不行就重新插拔 dongle。
+

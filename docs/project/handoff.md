@@ -33,6 +33,7 @@
 | 迈从 G87（VID_41E4&PID_2001） | 0x13 会话 | 已打通 |
 | 迈从 G87 V2（3837:201B）/ A7 V2 Pro（3837:100A） | 前者走 0x13 会话；后者走 E2 被动帧 + `0x11/0x06` 触发 | 代码已接入，默认关。贡献者真机验证，本机未复测（mchose.md §1.6） |
 | 罗技 Bolt（C548 + MX Master 3S） | HID++ | 已真机验证 |
+| 罗技 PRO X 2 LIGHTSPEED 耳机（046D:0AF7） | LIGHTSPEED 2.4G / Centurion | 2.4G 真机验证放电、充电、休眠唤醒与关闭开关后停查；蓝牙走 Windows HFP 节点，USB 有线模式未验证（logitech.md §2）。046D:C54D 的 PRO X 2 是另一台鼠标|
 | 雷柏 VT3 二代（VID_24AE&PID_1412） | status-report7 被动心跳 | 已打通，零写入。雷柏不是 HID++，勿让 Logitech 插件认领 |
 | 英菲克 ZHEN（VID_1D57&PID_FA65） | report 0x03 被动状态帧 | 已打通，零写入；放电 `0x01` / 充电 `0x03` 已校准（inphic.md §1） |
 | HECATE G5M Pro（VID_35BB&PID_D00B） | report 0x04 被动状态帧 | 代码已接入，默认开、零写入。帧与充放电是贡献者声明，本机未复测（hecate.md §1） |
@@ -75,7 +76,8 @@
 9. **GANSS 认领判据（CR-66）**：需要有 GANSS 设备的人做三件事——记下接收器自报的产品名/厂商名；抓一次官方配置软件的包，看它怎么定位接口、有没有取型号的命令；换 USB 口与固件后复测 `&mi_03#` 是否稳定。清单在 `hardware/ganss.md` §6.1。
 10. **V9 Pro 耳机（CR-67）**：需要有设备的人补三个电量点（满电/中间/低电）与充电时的样本，确认 `[3]` 是否充电标志；顺带确认接收器会不会把主机写入回显到输入队列。清单在 `hardware/mchose-v9-pro.md` §5。
 11. **贴片选屏真机复看**：本机只有「仅第二屏」一种接法实测过（配置屏不在 → 降级主屏，日志已确认）。还需切「仅电脑屏幕 / 扩展 / 复制」各一次，看贴片是否 1 秒内跟到新任务栏、设置页刷新按钮后列表是否反映当前接法、`<名字>（未连接）` 是否显示正确。清单在 `dev/monitor-identity.md` §7。
-
+12. **罗技 PRO X 2 LIGHTSPEED（#24）**：2.4G Centurion 已真机验证放电、充电、时间戳同步和关闭插件后停止通信；蓝牙由 Windows HFP 节点读取并真机核对电量（`hardware/logitech.md` §2）。USB 有线模式未覆盖。
+    
 ## 5. 给下一个 AI 的注意事项
 
 1. **开工**：`docs/README.md` 症状速查 → 本文件 → 专题文档。文档比记忆新。
@@ -115,3 +117,4 @@
 | 某轮为什么这么做 | `docs/project/changelog.md` |
 | 还有什么没修 | `docs/reviews/BACKLOG.md` |
 | 审查红线 | `docs/dev/review-standard.md` |
+

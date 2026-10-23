@@ -40,4 +40,3 @@ internal static class ClassicDeviceName
             ? "PRO X 2 LIGHTSPEED"
             : name;
 }
-

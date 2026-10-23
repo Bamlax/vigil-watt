@@ -296,4 +296,3 @@ public sealed class BluetoothClassicWatcher : IDisposable
         _watcher?.Stop();
     }
 }
-

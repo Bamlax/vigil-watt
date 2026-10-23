@@ -2,6 +2,7 @@
 
 > 从 [protocols.md](protocols.md) 拆出（2026-10-21）。结论均来自真机验证或官方软件抓包；改协议代码前先读本文。
 
+## 1. HID++ 接收器与直连设备
 
 HID++ 1.0/2.0 协议发现（无型号白名单）。电量级联：
 `0x1004` Unified Battery → `0x1000` Battery Status → `0x1001` Battery Voltage → `0x1F20` ADC Measurement → 1.0 寄存器 `0x07`/`0x0D`。
@@ -72,4 +73,3 @@ HID++ 1.0/2.0 协议发现（无型号白名单）。电量级联：
 **蓝牙补充验证（2026-10-23）**：用户将 PRO X 2 切换并连接到 Windows 蓝牙音频。VigilWatt 日志 19:50:08.330 将经典蓝牙设备 `PRO X 2` 识别为耳机，19:50:15.017 记录 `经典蓝牙电量(HFP 节点): PRO X 2 60%`；同一时刻用户截图中 Windows 蓝牙设置与 VigilWatt 蓝牙行均为 60%。这是 Windows HFP 设备节点电量属性的端到端验证，不是 BLE GATT，也没有使用 Centurion / Logitech HID++ 查询。VigilWatt 同时显示另一条 2.4G 耳机接口离线（55%），符合切换离开 LIGHTSPEED 模式后的表现；鼠标仍独立显示 77%。用户 G HUB 截图将 77% 鼠标标为 PRO X SUPERLIGHT 2、55% 耳机标为 PRO X 2 LIGHTSPEED，因此经典蓝牙类型确认是耳机且原始名称为 `PRO X 2` 时，将列表名规范为 `PRO X 2 LIGHTSPEED`；其他名称不作型号推断。列表提示“采集不足”是剩余时间估算还未满足多个时间点，不影响当前 60% 电量读数。
 
 详细来源见 [sources.md](sources.md)；外部协议参考：[HeadsetControl PRO X 2 实现](https://github.com/Sapd/HeadsetControl/blob/master/lib/devices/logitech_gpro_x2_lightspeed.hpp)、[LogitechBatteryMonitor 协议与实机记录](https://github.com/Recopec/LogitechBatteryMonitor)。两项目均注明 GPL-2.0；本项目只参考公开协议事实，未复制其实现代码。
-

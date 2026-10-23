@@ -65,4 +65,3 @@ public sealed class CenturionCodecTests
     public void TryParseBatteryResponse_RejectsShortFrame()
         => Assert.False(CenturionCodec.TryParseBatteryResponse(new byte[12], out _, out _));
 }
-

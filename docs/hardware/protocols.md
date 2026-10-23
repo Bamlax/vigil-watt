@@ -48,4 +48,3 @@
 - 配置中心版本清单：`https://cdn.mchose.com.cn/configCenter/config/global.json`（base64 zip，内含 keyboardConfig 哈希）
 - 桌面版 MCHOSE HUB：`https://cdn.mchose.com.cn/MCHOSE_HUB_installer.zip`（Electron，未验证是否支持 41E4 老款）
 - 官方设备表（打包在主 JS 里）：G87 V2 有线 = 0x3837:0x2015，官方通用 dongle = 0x3837:0x3033；0x41E4 世代 = Ace60/Ace68/Jet75/Mix87/Zero75 等有线型号 + 老款 dongle（0x41E4:0x2001 不在官方表里，但协议同代）
-

@@ -47,11 +47,8 @@ public sealed class LogitechPlugin : BatteryPluginBase, IBatteryPlugin
     /// 罗技靠自发的 HID++ 通知做实时更新，不需要加快发现节拍。</summary>
     public override bool SupportsDiscoveryProbe => false;
 
-    /// <summary>
-    /// 写入许可 = **插件开关**（<c>PluginEnabled["Logitech"]</c>）。罗技的发现、电量读取、名字/配对信息全靠写帧，
-    /// 没有可用的只读模式——"插件开着但关掉写入许可"是没有任何使用场景的组合，只会让用户以为功能坏了（CR-37）。
-    /// 闸门本身仍是唯一写点内的 <c>HidppIO.WritesAllowed</c>（CR-01）。
-    /// </summary>
+    /// <summary>写入许可 = **插件开关**（默认关）。罗技没有只读模式，"开着却关写入"只会让人以为坏了（CR-37）。
+    /// 两个写点同一道闸门：HID++ 经 <c>HidppIO.WritesAllowed</c> 读它，Centurion 在 <c>WriteOutput</c> 前直接查它（CR-01）。</summary>
     protected override bool WritesEnabled => IsWritesEnabled(SettingsKey);
 
     protected override OfflinePolicy Offline { get; } = new() { CountPollFailures = false, MaxFailures = 4 };
@@ -76,14 +73,15 @@ public sealed class LogitechPlugin : BatteryPluginBase, IBatteryPlugin
         session.OpenFailedAt = DateTimeOffset.Now;
     }
 
-
-    private static bool IsCenturionCandidate(HidDeviceInfo info)
-        => CenturionCodec.IsSupportedInterface(info.VendorId, info.ProductId, info.UsagePage, info.Usage,
-            info.InputReportLength, info.OutputReportLength);
+    /// <summary>判断接口是否为 HID++ 兼容 vendor 通道。HIDP_CAPS 字段序早前写反过（已修），且各家把 vendor 页放在 usage_page 还是 usage 上不一，故对 0xFF00 / 0xFF43 两个候选值在**两个字段里都查**，避免因字段序差异漏掉设备。</summary>
     public static bool IsHidppInterface(HidDeviceInfo info) =>
         info.VendorId == LogitechVid &&
         (info.UsagePage == HidppUsagePage || info.Usage == HidppUsagePage ||
          info.UsagePage == VendorUsagePage || info.Usage == VendorUsagePage);
+
+    private static bool IsCenturionCandidate(HidDeviceInfo info)
+        => CenturionCodec.IsSupportedInterface(info.VendorId, info.ProductId, info.UsagePage, info.Usage,
+            info.InputReportLength, info.OutputReportLength);
 
     private readonly ConcurrentDictionary<string, ReceiverSession> _sessions = new();
 
@@ -849,6 +847,4 @@ public sealed class LogitechPlugin : BatteryPluginBase, IBatteryPlugin
         base.Detach();
         if (released > 0) Log.Info($"罗技 HID++ 插件已卸载，释放 {released} 个接收器会话");
     }
-
 }
-

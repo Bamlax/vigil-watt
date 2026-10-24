@@ -22,3 +22,7 @@
 ## 2026-10-23
 
 - **Mutsuki233**（[#45](https://github.com/evren-oct/vigil-watt/pull/45)）：纳入罗技 PRO X 2 LIGHTSPEED 耳机（`046D:0AF7`）的 Centurion 只读电量通道、经典蓝牙显示名归一、失败容错与 2.4G 查询帧解析 / 名称两条单测。认领硬绑 `046D:0AF7` + `0xFFA0:0x0001` + 输入输出各 ≥64 字节，沿用「罗技」插件开关；Centurion 连续 4 次无应答才熔断转离线（比基类默认多容忍 1 次，拔线瞬间的短时超时不该造成离线闪烁）。**未纳入** HID++ 路径的改动与 USB 有线模式认领——后者耳机支持有线，但本次未验证。真机由贡献者本人验证：2.4G 放电 / 充电 / 拔线恢复 / 休眠唤醒，蓝牙电量与 Windows 设置一致，关闭罗技开关后插件卸载且不再查询（未做 USB 总线级抓包）。测试项目编译通过；单测在贡献者环境里因测试宿主起不来未能运行。**收口改动（维护者）**：本机复跑全量单测 **662 通过 / 1 跳过（CR-83）/ 0 失败**，用例本身没问题；`WritesEnabled` 的注释仍写「闸门是唯一写点内的 `HidppIO.WritesAllowed`」，与 Centurion 新增的第二个写点不符，已改写为两个写点同一道闸门；补回被误删的 `IsHidppInterface` 摘要并整理空行；`review-standard.md` 的 R2 例外条款按「混合型插件」重写；`logitech.md` 补 `## 1.` 标题（原文只有 §2，编号从 2 开始）；handoff §4 的 `#24` 改为 `#45`（#24 是设备适配指南 issue）；CR-91~93 记入 BACKLOG。
+
+## 2026-10-24
+
+- **dotisland**（[#14](https://github.com/evren-oct/vigil-watt/pull/14)）：只摘取两处——BLE 端点在 GATT 直读打开设备后补全缓存名（`BleBatteryWatcher.ReadBatteryViaGattAsync`，Watcher 的 Added 常带空名），设备列表电量列 `MinWidth=78` 右对齐（`99%` 与 `--` 宽度不同会让相邻行右端错位）。**未纳入** PR 核心的「按显示名双通道去重」：与本项目刚确认的决策冲突（多模连接厂家就按三个通道算，且托盘/贴片/小组件都只取在线设备，离线条目不占名额）；按 `Trim()` 后的名字分组，对 `迈从 2.4G Wireless` / `MCHOSE G87 5.0` 这种名字不同的设备无效；另有在 `Devices` getter 里改 `Kind` 的副作用与同型号误合并风险。也未采纳 `Protocol` 由 `BLE GATT` 改成「蓝牙」。本机复测：构建 0 警告 0 错误、相关单测 38 项通过。**收口改动（维护者）**：补名后补一次 `DeviceUpdated`（原 PR 补名后不通知 UI，界面不会立刻刷新）。

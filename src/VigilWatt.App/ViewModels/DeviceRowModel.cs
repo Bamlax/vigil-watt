@@ -72,7 +72,8 @@ public sealed class DeviceRowModel
             Id = d.Id,
             Icon = DeviceIconFactory.Scaled(kind, iconColor, 22),
             Name = d.DisplayName,
-            PercentText = DeviceStatusFormatter.PercentText(percent),
+            // 无读数用 "----"：与 "100%" 同宽，右对齐时不会和相邻行差半个字
+            PercentText = DeviceStatusFormatter.PercentText(percent, "----"),
             Progress = percent ?? 0,
             SourceText = DeviceSourceInfo.ShortLabel(d.Source),
             SourceBrush = UiPalette.Brush(sourceColor),

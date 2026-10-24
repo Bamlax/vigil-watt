@@ -221,6 +221,16 @@ public sealed class BleBatteryWatcher : IDisposable
                 if (ble.ConnectionStatus != BluetoothConnectionStatus.Connected)
                     return;
 
+                // DeviceWatcher 的 Added 常带空 Name（系统还没查到属性），UI 只能显示 Id 或「BLE 设备」；
+                // 打开设备后 OS 已有缓存名，补上并通知一次。来源 PR #14（dotisland）。
+                if (string.IsNullOrEmpty(status.Name) && !string.IsNullOrEmpty(ble.Name))
+                {
+                    status.Name = ble.Name;
+                    status.LastUpdated = DateTimeOffset.Now;
+                    Log.Info($"BLE 设备名已补全（GATT 缓存）: {status.Name}");
+                    DeviceUpdated?.Invoke(status);
+                }
+
                 var svcResult = await ble
                     .GetGattServicesForUuidAsync(GattServiceUuids.Battery, BluetoothCacheMode.Uncached)
                     .AsTask().WaitAsync(TimeSpan.FromSeconds(8));

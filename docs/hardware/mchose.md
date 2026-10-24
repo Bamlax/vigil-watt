@@ -125,7 +125,7 @@ dongle 的配置会话一次只服务一个客户端。崩溃进程不关会话 
 
 官方 MOUSE_LEGACY 的 WebHID 写法是 `sendFeatureReport(0x11, "06 00×19" ^ 0xFF)`——**`data` 不含 rid**。Windows `WriteOutput` 要求 `buffer[0]` 就是 report ID 且**不取反**，照抄网页版把 rid 一起取反必写失败。
 
-**型号识别**：官方 M HUB WEB 前端 `battery-monitor` 的 `getPassWord` / `KB_PW2MODEL` 把"接收器密码"映射到型号名；密码就是 V1 会话 ACK（`13 05 01 …`，布局见 §1.3）payload 的前 6 字节，即 ACK 的 `[6..11]`。已收录 18 个键（G87 / G87 V2 / K99 / K99 V2 / G98 / G98 Pro / X75 / X75 V2 / G75 Pro / G75 V2 / G98 V2 / UT98 / Z75 / Z75S / KX75 / GX87 / GX87 V2 / K87），全表在 `MchoseMouseCodec.ModelFromPassword`。产品名是泛化的「MCHOSE 2.4G Wireless」时用型号替换，显示成「迈从 xxx」。
+**型号识别**：官方 M HUB WEB 前端 `battery-monitor` 的 `getPassWord` / `KB_PW2MODEL` 把"接收器密码"映射到型号名；密码就是 V1 会话 ACK（`13 05 01 …`，布局见 §1.3）payload 的前 6 字节，即真机 ACK 的 **`[5..10]`**（`13 05 01 00 0A 03 …` 里 `03` 在第 5 字节；早期合成样本多一个字节、密码在 `[6..11]`，`ModelFromSessionAck` 两种偏移都试）。已收录 18 个键（G87 / G87 V2 / K99 / K99 V2 / G98 / G98 Pro / X75 / X75 V2 / G75 Pro / G75 V2 / G98 V2 / UT98 / Z75 / Z75S / KX75 / GX87 / GX87 V2 / K87），全表在 `MchoseMouseCodec.ModelFromPassword`。产品名是泛化的「MCHOSE 2.4G Wireless」时用型号替换，显示成「迈从 xxx」。
 
 **本机边界**：本机只有 G87 V1（`41E4:2001`），没有 A7 V2 Pro / G87 V2，鼠标链路只有单测与代码审查。贡献者（zi-ha）在 A7 V2 Pro 接收器（`3837:100A`）上抓到了 E2 帧与触发帧；G87 V2 接收器（`3837:201B`）在贡献者机器上走**键盘 V1 会话**（抓到 4A 应答 69%），但会话 ACK 的密码段是全 0，型号表匹配不到，显示名退回产品名。
 

@@ -11,6 +11,8 @@
 - **蓝牙双通道去重（手机不再出现两条）**：同一台设备在系统里同时注册经典 AEP 与 LE AEP（手机最明显），项目按 `btc:` / `ble:` 前缀当成两台。新增 `Ble/DualChannelId` 按 MAC 归一，`DeviceManager.AbsorbDualChannel` 收敛到经典那条——LE 端点有电量就补给经典，没有就丢弃。关闭 CR-68（PR #14 的按显示名方案不再需要）。
 - **BLE 端点无名时显示「BLE 设备」**：不再把裸设备 ID 摆进列表。注意手机连上后仍只有在线/离线、没有百分比——Windows 不通过 HFP 暴露手机电池，这是系统限制，不是漏实现。
 - **BLE 设备类型改为系统类别优先**：`BleBatteryWatcher` 原来只按显示名猜类型，真机 `MCHOSE G87 5.0` 里一个品类词都没有，键盘被画成通用圆点。现在名字只作首帧的即时兜底，`System.Devices.Aep.Category`（系统给 `Input.Keyboard` / `Communication.Phone`）一到就覆盖——名字是厂商随手起的，可能含误导词，系统类别才是设备自己声明的。复用 `ClassicDeviceKindResolver.FromCategories`（由 private 改 public），每台只查一次。
+- **收进 PR #14 的两处**（dotisland）：BLE 端点在 GATT 直读时补全缓存名（Watcher 的 Added 常带空名，之前只能显示「BLE 设备」），设备列表电量列固定最小宽度并右对齐（`99%` 与 `--` 宽度不同会让相邻行错位）。未采纳其「按显示名合并双通道」，理由见 `contributions.md`。
+- **修迈从键盘型号识别（偏移差一位）**：`ModelFromSessionAck` 从 ACK 的 `[6]` 取密码，而真机帧是 `13 05 01 00 0A 03 00 00 00 02 1C 01`，密码在 `[5]`（`03 00 00 00 02 1C` = G87）。取错位置导致**整张 18 项型号表对所有键盘都匹配不到**，显示名一直退回产品名「MCHOSE 2.4G Wireless」。现在两种偏移都试（兼容当初那段多一字节的合成样本），真机复测显示名变「迈从 G87」。
 
 ## 2026-10-21
 

@@ -6,7 +6,7 @@ VigilWatt 的设备适配大多来自社区：有人提供抓包样本，有人�
 
 | 贡献者 | 贡献内容 | 关联 |
 |---|---|---|
-| **dotisland** | HECATE G5M Pro 只读电量插件（`35BB:D00B` 被动 report `0x04`）；拔出设备后把离线状态交回设备列表 | [PR #13](https://github.com/evren-oct/vigil-watt/pull/13) |
+| **dotisland** | HECATE G5M Pro 只读电量插件（`35BB:D00B` 被动 report `0x04`）；拔出设备后把离线状态交回设备列表；BLE 端点补全缓存名、设备列表电量列右对齐 | [PR #13](https://github.com/evren-oct/vigil-watt/pull/13) · [PR #14](https://github.com/evren-oct/vigil-watt/pull/14) |
 | **Baron77777** | AULA F99 Pro（`3554:FA09`，`0x13` 会话/推送）与 DELUX M900 Pro（`1D57:FA65`，被动 5 字节状态帧）两个插件 | [PR #16](https://github.com/evren-oct/vigil-watt/pull/16) |
 | **luze258** | 三台设备：DualSense 蓝牙电量（report `0x31` + CRC）、GANSS GS3104T-Pro（33 字节查询帧）、MCHOSE V9 Pro 耳机（64 字节查询帧）；以及 GANSS 认领判据的风险分析 | [PR #15](https://github.com/evren-oct/vigil-watt/pull/15) |
 | **zi-ha** | 迈从鼠标 V2（A7 V2 Pro `3837:100A`）与 G87 V2（`3837:201B`）支持；按协议区分键鼠图标的 `ResolveKind`；用官方密码表识别型号 | [PR #17](https://github.com/evren-oct/vigil-watt/pull/17) |

@@ -13,6 +13,7 @@ VigilWatt 的设备适配大多来自社区：有人提供抓包样本，有人�
 | **haihuang0506** | 迈从 K7 V2 Ultra+（`3837:1018`）支持：`0x0900` 查询 + `0x0600` 事件协议；从官方 M HUB 运行时 JS 取出帧构造与解析，真机验证 | [PR #33](https://github.com/evren-oct/vigil-watt/pull/33) |
 | **KNA7022** | 黑爵 AK870（`3151:4011`，feature `F7` 状态查询）与雷神 ML903 NearLink Se（`369B:0234`，`0xA0` 设备信息 TLV）两个插件 | [PR #25](https://github.com/evren-oct/vigil-watt/pull/25) |
 | **shengzhi233** | CHERRY PIXIU75（`046A:01E4`，64 字节块协议，块 `0x1A` 取电量 + 充电位）与派世 Pulsar X2 V2（`3554:F508`，17 字节 STATUS/POWER）两个插件 | [PR #36](https://github.com/evren-oct/vigil-watt/pull/36) |
+| **imx1n** | 雷蛇毒蝰 V4 Pro（`1532:00E6` 接收器 / `1532:00E5` 本体，经典 90 字节 feature 协议）与索尼 INZONE H9 II（`054C:0FA8`，`0xFF04` 控制传输查询）两个插件 | 待合并 |
 
 ## 还能怎么帮
 

@@ -55,6 +55,9 @@ public sealed class RazerPlugin : BatteryPluginBase
 
     protected override (int? Percent, ChargingState Charging)? PollDevice(TrackedDevice dev)
     {
+        // R1：每个写帧点都要能被开关挡住。基类只在 Probe 阶段拦，轮询这里得自己问（含熔断退避）。
+        if (!CanWrite(dev)) return null;
+
         var reading = Query(dev.Handle, dev.Info.ProductId);
         return reading.HasValue ? (reading.Value.Percent, reading.Value.Charging) : null;
     }

@@ -27,6 +27,9 @@ public sealed class HidDeviceInfo
     public string Product { get; init; } = "";
     public string Manufacturer { get; init; } = "";
 
+    /// <summary>序列号。设备不提供时为空串（采集侧要转成 null，不能当"读失败"）。</summary>
+    public string SerialNumber { get; init; } = "";
+
     public string VidPid => $"VID_{VendorId:X4}&PID_{ProductId:X4}";
 
     public override string ToString() =>
@@ -35,10 +38,24 @@ public sealed class HidDeviceInfo
 
     /// <summary>打开设备。键盘/鼠标等受保护的 collection 会抛 UnauthorizedAccessException。</summary>
     public HidDeviceHandle Open()
+        => OpenCore(NativeHid.GENERIC_READ | NativeHid.GENERIC_WRITE);
+
+    /// <summary>只读打开：采集只用它，避免为了读一份报文去申请写权限（见 docs/project/capture.md）。</summary>
+    public HidDeviceHandle OpenRead()
+        => OpenCore(NativeHid.GENERIC_READ);
+
+    /// <summary>
+    /// 读写打开。**只有采集页在用户显式授权「允许发送」时用它**——常规采集一律 <see cref="OpenRead"/>，
+    /// 从访问权限层面保证写不进去（见 docs/project/capture.md）。
+    /// </summary>
+    public HidDeviceHandle OpenReadWrite()
+        => OpenCore(NativeHid.GENERIC_READ | NativeHid.GENERIC_WRITE);
+
+    private HidDeviceHandle OpenCore(uint access)
     {
         var handle = NativeHid.CreateFileW(
             DevicePath,
-            NativeHid.GENERIC_READ | NativeHid.GENERIC_WRITE,
+            access,
             NativeHid.FILE_SHARE_READ | NativeHid.FILE_SHARE_WRITE,
             IntPtr.Zero,
             NativeHid.OPEN_EXISTING,
@@ -55,7 +72,8 @@ public sealed class HidDeviceInfo
             };
         }
 
-        var stream = new FileStream(handle, FileAccess.ReadWrite, 0, isAsync: true);
+        var stream = new FileStream(handle,
+            access == NativeHid.GENERIC_READ ? FileAccess.Read : FileAccess.ReadWrite, 0, isAsync: true);
         return new HidDeviceHandle(this, stream);
     }
 }

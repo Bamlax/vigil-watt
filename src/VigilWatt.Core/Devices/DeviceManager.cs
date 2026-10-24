@@ -113,6 +113,9 @@ public sealed class DeviceManager : IDisposable
 
     public DeviceStatus? Find(string id) => _devices.TryGetValue(id, out var d) ? d : null;
 
+    /// <summary>查某 HID 接口当前被哪个插件认领。采集页据此区分「已适配」与「未适配」。</summary>
+    public string? GetClaimOwner(string devicePath) => _claims.OwnerOf(devicePath);
+
     public RemainingTimeEstimateResult GetRemainingTimeEstimate(DeviceStatus device)
     {
         if (!_settings.RemainingTimeEstimateEnabled)

@@ -18,9 +18,7 @@
 
 **开发版数据目录在 `bin\x64\Debug\...\win-x64\data\`**（`AppPaths` 用 `#if DEBUG` 分流，Release 才用 `%LOCALAPPDATA%\VigilWatt`），所以从 `bin` 双击即可运行、不碰用户目录；`VIGILWATT_DATA_DIR` 可覆盖。为什么必须这么改见 `dev/runtime-pitfalls.md` §20，用法见 `dev/build.md` §3.1。
 
-审查标准在 `docs/dev/review-standard.md`，未修项全集在 `docs/reviews/BACKLOG.md`（不要在本文再抄一份）。
-
-设备接入已收五批（#36 CHERRY/派世、#25 黑爵/雷神、#33 迈从 K7、#23 寸渊影弑/盖世小鸡、#18 前行者），逐台状态见 §2 表；两个 `integrate/*` 本地分支已删。设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 按 BACKLOG CR-68 ~ CR-72 排队。
+设备接入已收五批，逐台状态见 §2 表；设备管理类改动（#14 双通道去重、#16 设备管理）、#15 的 BLE 大改、issue #12/#11 按 BACKLOG CR-68 ~ CR-72 排队。**设备诊断页（2026-10-24 新增，主窗口第 5 项）**= 未适配设备的 USB/HID 只读采集，流程与边界见 `capture.md`；审查标准见 `dev/review-standard.md`，未修项见 `reviews/BACKLOG.md`。
 
 更新说明是用户向的 `docs/project/release-notes.md`，随包分发：关于页「更新日志」离线可看全部历史，更新确认框显示目标版本的内容（来自更新源 notes，缺失时只显示版本行）。规则见 `dev/build.md` §8。
 
@@ -78,6 +76,7 @@
 10. **V9 Pro 耳机（CR-67）**：需要有设备的人补三个电量点（满电/中间/低电）与充电时的样本，确认 `[3]` 是否充电标志；顺带确认接收器会不会把主机写入回显到输入队列。清单在 `hardware/mchose-v9-pro.md` §5。
 11. **贴片选屏真机复看**：本机只有「仅第二屏」一种接法实测过（配置屏不在 → 降级主屏，日志已确认）。还需切「仅电脑屏幕 / 扩展 / 复制」各一次，看贴片是否 1 秒内跟到新任务栏、设置页刷新按钮后列表是否反映当前接法、`<名字>（未连接）` 是否显示正确。清单在 `dev/monitor-identity.md` §7。
 12. **罗技 PRO X 2 LIGHTSPEED（#45）**：2.4G Centurion 已真机验证放电、充电、时间戳同步和关闭插件后停止通信；蓝牙由 Windows HFP 节点读取并真机核对电量（`hardware/logitech.md` §2）。USB 有线模式未覆盖。
+13. **设备诊断页真机复核**：Feature 读取（勾选后实际 GET_REPORT）、采集中拔设备、记录上限截断、另存为对话框与剪贴板在非打包 WinUI 下的可用性——本机只验到被动监听拿到真实报文，清单在 `capture.md` §7。
 
 ## 5. 给下一个 AI 的注意事项
 

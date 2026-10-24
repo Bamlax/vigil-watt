@@ -96,6 +96,35 @@
     <Compile Include="..\VigilWatt.ProtocolCapture\CaptureRecord.cs" />
     <Compile Include="..\VigilWatt.ProtocolCapture\CaptureRecordFactory.cs" />
     <Compile Include="..\VigilWatt.ProtocolCapture\UsbCaptureReader.cs" />
+    <!-- 采集功能（未知设备调查）：模型 / 分析 / 报告 / 打包 / 存储 / 会话全部零 WinRT、零 Win32，
+         只有 Capture/Hid/ 那层碰 hid.dll，故这里能直接链真源文件（见 docs/project/capture.md）。 -->
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureEnums.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureRecord.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureEvent.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureError.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CapabilityItem.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureDeviceInfo.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\HidFieldInfo.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureSessionInfo.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureJson.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureAnalysis.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureAnalyzer.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureBundle.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureDeviceCatalog.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\DeviceGroupKey.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureHex.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\ICaptureWriter.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureGuide.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureOptions.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureLimits.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureJsonlWriter.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureSessionStateMachine.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureSession.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CaptureStore.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\ICaptureSource.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\IssueSummaryBuilder.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\HtmlReportGenerator.cs" />
+    <Compile Include="..\..\VigilWatt.Core\Capture\CapturePackageWriter.cs" />
   </ItemGroup>
 
 </Project>

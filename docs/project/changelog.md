@@ -3,6 +3,15 @@
 > 只留「改了什么 + 为什么」。协议、坑、流程在专题文档，这里不抄第二份。
 > 新会话不必读。每条一两句；单日新增超过 15 行就是写长了。发版只在文末版本表加一行。构建结果、打包耗时、文件清单不记（`AGENTS.md` §3）。
 
+## 2026-10-24
+
+- **设备图标补手机 / 平板 / 手表**：`DeviceKind` 追加 `Phone`/`Tablet`/`Watch`（只能追加在末尾——`IconKind` 以数字存进 settings.json，插中间会让老用户的自定义图标整体错位），`DeviceIconFactory` 的 XAML 与 GDI 两套造型同步加。
+- **修「手机显示成耳机」**：经典蓝牙手机同样暴露 HFP/HSP，旧逻辑「有音频服务 = 耳机」会把它画成耳机。`ClassicDeviceKindResolver.Resolve` 现在先按名字判掉手机/平板/手表，再走音频服务分支；`FromCategories` 的 `phone` 判定排在 `headphone/headset` 之后（类别串 `Audio.Headphone` 里也含 `phone`）。`DeviceKindGuesser` 的手机关键字不收裸 `phone`，避免命中 headphone / microphone。
+- **设备列表页图标改用矢量**：`DeviceRowModel.GlyphFor` 的 Segoe MDL2 码位映射删掉，改调 `DeviceIconFactory.Scaled`（名义框统一 14×13 再缩放，各类型视觉大小一致），与小组件、任务栏贴片共用一套造型，新增类型不必再赌字体字形。设备外观对话框的图标选择由硬编码 4×2 改为按选项数推行数。
+- **蓝牙双通道去重（手机不再出现两条）**：同一台设备在系统里同时注册经典 AEP 与 LE AEP（手机最明显），项目按 `btc:` / `ble:` 前缀当成两台。新增 `Ble/DualChannelId` 按 MAC 归一，`DeviceManager.AbsorbDualChannel` 收敛到经典那条——LE 端点有电量就补给经典，没有就丢弃。关闭 CR-68（PR #14 的按显示名方案不再需要）。
+- **BLE 端点无名时显示「BLE 设备」**：不再把裸设备 ID 摆进列表。注意手机连上后仍只有在线/离线、没有百分比——Windows 不通过 HFP 暴露手机电池，这是系统限制，不是漏实现。
+- **BLE 设备类型改为系统类别优先**：`BleBatteryWatcher` 原来只按显示名猜类型，真机 `MCHOSE G87 5.0` 里一个品类词都没有，键盘被画成通用圆点。现在名字只作首帧的即时兜底，`System.Devices.Aep.Category`（系统给 `Input.Keyboard` / `Communication.Phone`）一到就覆盖——名字是厂商随手起的，可能含误导词，系统类别才是设备自己声明的。复用 `ClassicDeviceKindResolver.FromCategories`（由 private 改 public），每台只查一次。
+
 ## 2026-10-21
 
 - **MCHOSE G3 V2（`3837:4245`）**：接入 `gmouse` 主动查询协议——65 字节查询帧 `00 55 30 A5 0B 2E…`、应答前缀 `AA 30`，电量 `[off+8]` / 充电 `[off+9]`。这颗接收器的厂商接口被动监听零报文、也不走 QHW，靠 usagePage `0xFF01` / usage `0x10` 的完整指纹与同厂的 K7（`0x0001`）、V2 被动 E2 链路区分。帧取自官方 M HUB `/gmouse` 与社区 aliezzzz/mchose-battery。新增 `MchoseGmouseCodec`（纯函数 + 用例），分类器加 `Gmouse` 并排在 `MouseV2` 之前。见 `hardware/mchose.md` §4。

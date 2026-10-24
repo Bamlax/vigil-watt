@@ -147,18 +147,22 @@ public sealed partial class DevicesPage : Page
             : device.Kind;
         DeviceKind? selectedKind = current?.IconKind;
         var iconChoices = new List<(RadioButton Button, Border Card)>();
+        const int iconColumns = 4;
         var iconGrid = new Grid { ColumnSpacing = 8, RowSpacing = 8 };
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < iconColumns; i++)
             iconGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        for (int i = 0; i < 2; i++)
-            iconGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var options = new (DeviceKind? Value, DeviceKind Preview, string Label)[]
         {
             (null, automaticKind, "自动"), (DeviceKind.Unknown, DeviceKind.Unknown, "通用"),
             (DeviceKind.Mouse, DeviceKind.Mouse, "鼠标"), (DeviceKind.Keyboard, DeviceKind.Keyboard, "键盘"),
             (DeviceKind.Headset, DeviceKind.Headset, "耳机"), (DeviceKind.Speaker, DeviceKind.Speaker, "音箱"),
             (DeviceKind.Gamepad, DeviceKind.Gamepad, "手柄"), (DeviceKind.Computer, DeviceKind.Computer, "电脑"),
+            (DeviceKind.Phone, DeviceKind.Phone, "手机"), (DeviceKind.Tablet, DeviceKind.Tablet, "平板"),
+            (DeviceKind.Watch, DeviceKind.Watch, "手表"),
         };
+        // 行数由选项数推出来：以后再加图标只要往 options 里追加，不用动布局
+        for (int i = 0; i < (options.Length + iconColumns - 1) / iconColumns; i++)
+            iconGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         var primaryBrush = Application.Current.Resources["TextFillColorPrimaryBrush"] as SolidColorBrush;
         var iconColor = primaryBrush?.Color ?? Color.FromArgb(255, 80, 80, 80);
         Brush GetBrush(string key, Brush fallback) =>
@@ -220,8 +224,8 @@ public sealed partial class DevicesPage : Page
                 UpdateIconChoiceCards();
             };
             iconChoices.Add((radio, card));
-            Grid.SetColumn(radio, i % 4);
-            Grid.SetRow(radio, i / 4);
+            Grid.SetColumn(radio, i % iconColumns);
+            Grid.SetRow(radio, i / iconColumns);
             iconGrid.Children.Add(radio);
         }
 

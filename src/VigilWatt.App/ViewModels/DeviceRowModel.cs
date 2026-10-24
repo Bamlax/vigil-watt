@@ -4,6 +4,7 @@ using VigilWatt.Core.Devices;
 using VigilWatt.Core.Settings;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 
 namespace VigilWatt.App.ViewModels;
 
@@ -14,7 +15,10 @@ namespace VigilWatt.App.ViewModels;
 public sealed class DeviceRowModel
 {
     public string Id { get; init; } = "";
-    public string IconGlyph { get; init; } = "\uE702";
+
+    /// <summary>行首设备图标：矢量造型，与小组件/任务栏贴片同一套（<see cref="DeviceIconFactory"/>），不再用字体图标。</summary>
+    public UIElement? Icon { get; init; }
+
     public string Name { get; init; } = "";
     public string PercentText { get; init; } = "--%";
     public double Progress { get; init; }
@@ -42,7 +46,12 @@ public sealed class DeviceRowModel
     {
         var d = DevicePresentation.Apply(source, settings);
         var percent = d.BatteryPercent;
-        var icon = GlyphFor(d.Kind, d.DisplayName, DevicePresentation.HasIconOverride(d.Id, settings));
+        // 用户明确选过图标就不再按名字猜（选"通用"要保住那个圆点）
+        var kind = d.Kind == DeviceKind.Unknown && !DevicePresentation.HasIconOverride(d.Id, settings)
+            ? DeviceKindGuesser.Guess(d.DisplayName)
+            : d.Kind;
+        var iconColor = (Application.Current.Resources["TextFillColorPrimaryBrush"] as SolidColorBrush)?.Color
+                        ?? Color.FromArgb(255, 80, 80, 80);
 
         bool charging = DeviceStatusFormatter.IsCharging(d.Charging);
         string state = DeviceStatusFormatter.ChargeSuffix(d.Charging);
@@ -61,7 +70,7 @@ public sealed class DeviceRowModel
         return new DeviceRowModel
         {
             Id = d.Id,
-            IconGlyph = icon,
+            Icon = DeviceIconFactory.Scaled(kind, iconColor, 22),
             Name = d.DisplayName,
             PercentText = DeviceStatusFormatter.PercentText(percent),
             Progress = percent ?? 0,
@@ -73,27 +82,6 @@ public sealed class DeviceRowModel
             IsOnline = d.IsOnline,
             ProgressBrush = UiPalette.Brush(progressColor),
             PercentBrush = percentBrush,
-        };
-    }
-
-    /// <summary>
-    /// 设备类型 → 图标字形（Segoe MDL2 Assets / Segoe Fluent Icons）。
-    /// **优先用插件声明的 <see cref="DeviceStatus.Kind"/>**，没声明时才按显示名猜——
-    /// 真机显示名里一个关键字都没有（"Rapoo Gaming Device"/"MCHOSE 2.4G Wireless"/"EDIFIER W820NB"），
-    /// 靠名字猜必然退化成通用蓝牙图标。见 docs/project/handoff.md「第三轮：改显式声明设备类型」。
-    /// </summary>
-    private static string GlyphFor(DeviceKind kind, string displayName, bool customized)
-    {
-        if (kind == DeviceKind.Unknown && !customized) kind = DeviceKindGuesser.Guess(displayName);
-        return kind switch
-        {
-            DeviceKind.Gamepad => "\uE7FC",   // Game
-            DeviceKind.Mouse => "\uE962",     // Mouse
-            DeviceKind.Keyboard => "\uE765",  // KeyboardClassic
-            DeviceKind.Headset => "\uE7F6",   // Headphone
-            DeviceKind.Speaker => "\uE7F5",   // Speakers
-            DeviceKind.Computer => "\uE7F8",  // Devices2（显示器造型，代表本机）
-            _ => "\uE702",                    // Bluetooth（兜底）
         };
     }
 }

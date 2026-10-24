@@ -42,7 +42,12 @@ public sealed class DeviceRowModel
     /// 注意 x:Bind 绑 null 会压掉样式默认前景导致文字不可见，此属性必须非空。</summary>
     public Brush PercentBrush { get; init; } = UiPalette.Brush(UiPalette.Offline);
 
-    public static DeviceRowModel From(DeviceStatus source, AppSettings settings, RemainingTimeEstimateResult remainingTime)
+    /// <summary>显示内容的指纹（不含 Icon 元素）：刷新时指纹相同就整行复用，避免每分钟轮询把列表重建一遍。</summary>
+    public string Signature { get; init; } = "";
+
+    public static DeviceRowModel From(
+        DeviceStatus source, AppSettings settings, RemainingTimeEstimateResult remainingTime,
+        DeviceRowModel? previous = null)
     {
         var d = DevicePresentation.Apply(source, settings);
         var percent = d.BatteryPercent;
@@ -50,13 +55,24 @@ public sealed class DeviceRowModel
         var kind = d.Kind == DeviceKind.Unknown && !DevicePresentation.HasIconOverride(d.Id, settings)
             ? DeviceKindGuesser.Guess(d.DisplayName)
             : d.Kind;
-        var iconColor = (Application.Current.Resources["TextFillColorPrimaryBrush"] as SolidColorBrush)?.Color
-                        ?? Color.FromArgb(255, 80, 80, 80);
 
         bool charging = DeviceStatusFormatter.IsCharging(d.Charging);
         string state = DeviceStatusFormatter.ChargeSuffix(d.Charging);
         if (!d.IsOnline) state = " · 离线";
 
+        // 无读数用 "----"：与 "100%" 同宽，右对齐时不会和相邻行差半个字
+        string percentText = DeviceStatusFormatter.PercentText(percent, "----");
+        string sourceText = DeviceSourceInfo.ShortLabel(d.Source);
+        string subText = $"{d.Protocol}{state}{(remainingTime.IsAvailable ? $" · 约{RemainingTimeEstimator.Format(remainingTime.Remaining!.Value)}剩余" : $" · {remainingTime.Explain()}")} · 更新于 {d.LastUpdated:HH:mm:ss}";
+
+        // Source 也要进指纹：Ble 与 BluetoothClassic 的徽标文字都是"蓝牙"，但颜色不同
+        string signature = string.Join('|',
+            d.Id, d.DisplayName, (int)kind, percentText, subText, sourceText, (int)d.Source, charging, d.IsOnline);
+
+        if (previous != null && previous.Signature == signature) return previous;
+
+        var iconColor = (Application.Current.Resources["TextFillColorPrimaryBrush"] as SolidColorBrush)?.Color
+                        ?? Color.FromArgb(255, 80, 80, 80);
         var progressColor = d.IsOnline
             ? UiPalette.BatteryLevel(percent, charging)
             : UiPalette.Offline;
@@ -70,15 +86,15 @@ public sealed class DeviceRowModel
         return new DeviceRowModel
         {
             Id = d.Id,
+            Signature = signature,
             Icon = DeviceIconFactory.Scaled(kind, iconColor, 22),
             Name = d.DisplayName,
-            // 无读数用 "----"：与 "100%" 同宽，右对齐时不会和相邻行差半个字
-            PercentText = DeviceStatusFormatter.PercentText(percent, "----"),
+            PercentText = percentText,
             Progress = percent ?? 0,
-            SourceText = DeviceSourceInfo.ShortLabel(d.Source),
+            SourceText = sourceText,
             SourceBrush = UiPalette.Brush(sourceColor),
             SourceBackgroundBrush = UiPalette.Brush(UiPalette.Tint(sourceColor)),
-            SubText = $"{d.Protocol}{state}{(remainingTime.IsAvailable ? $" · 约{RemainingTimeEstimator.Format(remainingTime.Remaining!.Value)}剩余" : $" · {remainingTime.Explain()}")} · 更新于 {d.LastUpdated:HH:mm:ss}",
+            SubText = subText,
             IsCharging = charging,
             IsOnline = d.IsOnline,
             ProgressBrush = UiPalette.Brush(progressColor),

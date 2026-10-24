@@ -13,6 +13,7 @@
 - **BLE 设备类型改为系统类别优先**：`BleBatteryWatcher` 原来只按显示名猜类型，真机 `MCHOSE G87 5.0` 里一个品类词都没有，键盘被画成通用圆点。现在名字只作首帧的即时兜底，`System.Devices.Aep.Category`（系统给 `Input.Keyboard` / `Communication.Phone`）一到就覆盖——名字是厂商随手起的，可能含误导词，系统类别才是设备自己声明的。复用 `ClassicDeviceKindResolver.FromCategories`（由 private 改 public），每台只查一次。
 - **收进 PR #14 的两处**（dotisland）：BLE 端点在 GATT 直读时补全缓存名（Watcher 的 Added 常带空名，之前只能显示「BLE 设备」），设备列表电量列固定最小宽度并右对齐（`99%` 与 `--` 宽度不同会让相邻行错位）。未采纳其「按显示名合并双通道」，理由见 `contributions.md`。
 - **修迈从键盘型号识别（偏移差一位）**：`ModelFromSessionAck` 从 ACK 的 `[6]` 取密码，而真机帧是 `13 05 01 00 0A 03 00 00 00 02 1C 01`，密码在 `[5]`（`03 00 00 00 02 1C` = G87）。取错位置导致**整张 18 项型号表对所有键盘都匹配不到**，显示名一直退回产品名「MCHOSE 2.4G Wireless」。现在两种偏移都试（兼容当初那段多一字节的合成样本），真机复测显示名变「迈从 G87」。
+- **设备列表改增量更新**：每次刷新都整体替换 `ItemsSource`，ListView 会丢弃所有行容器重建，每分钟轮询都闪一下（图标换成 `UIElement` 后更明显）。改为构造时设一次 `ObservableCollection`，之后按 Id 对位同步——内容指纹（不含 Icon）相同就整行复用，连图标元素都不重建，只替换真正变化的行。
 
 ## 2026-10-21
 

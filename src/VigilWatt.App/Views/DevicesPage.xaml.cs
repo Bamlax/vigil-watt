@@ -11,6 +11,7 @@ using Microsoft.UI.Xaml.Navigation;
 using VigilWatt.App.Services;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
+using System.Collections.ObjectModel;
 using System.Text;
 
 namespace VigilWatt.App.Views;
@@ -27,10 +28,15 @@ public sealed partial class DevicesPage : Page
     /// <summary>事件是否已订阅：Loaded 可能重复触发，不挡住就会叠加回调。</summary>
     private bool _hooked;
 
+    /// <summary>列表数据源。只在构造时赋给 ItemsSource，之后按 Id 增量同步——
+    /// 整块换 ItemsSource 会让 ListView 丢弃所有行容器重建，每分钟轮询都闪一下。</summary>
+    private readonly ObservableCollection<DeviceRowModel> _rows = new();
+
     public DevicesPage()
     {
         InitializeComponent();
         NavigationCacheMode = NavigationCacheMode.Required;
+        DeviceList.ItemsSource = _rows;
         Loaded += OnPageLoaded;
         Unloaded += OnPageUnloaded;
     }
@@ -79,8 +85,27 @@ public sealed partial class DevicesPage : Page
     private void Refresh()
     {
         var devices = App.Services.Manager.Devices;
-        DeviceList.ItemsSource = devices.Select(d => DeviceRowModel.From(
-            d, App.Services.Settings, App.Services.Manager.GetRemainingTimeEstimate(d))).ToList();
+        var settings = App.Services.Settings;
+
+        // 按 Id 取旧行，内容指纹相同就整行复用（连 Icon 元素一起），避免静止设备跟着重建
+        var existing = new Dictionary<string, DeviceRowModel>(_rows.Count);
+        foreach (var row in _rows) existing[row.Id] = row;
+
+        var fresh = new List<DeviceRowModel>(devices.Count);
+        foreach (var d in devices)
+        {
+            existing.TryGetValue(d.Id, out var previous);
+            fresh.Add(DeviceRowModel.From(d, settings, App.Services.Manager.GetRemainingTimeEstimate(d), previous));
+        }
+
+        // 逐位比较引用：复用的行原地不动，只替换真正变了的那些
+        for (int i = 0; i < fresh.Count; i++)
+        {
+            if (i >= _rows.Count) _rows.Add(fresh[i]);
+            else if (!ReferenceEquals(_rows[i], fresh[i])) _rows[i] = fresh[i];
+        }
+        while (_rows.Count > fresh.Count) _rows.RemoveAt(_rows.Count - 1);
+
         var online = devices.Count(d => d.IsOnline);
         // 带上时间戳：即使设备数没变，用户也能一眼看出这次刷新确实跑过了
         SummaryText.Text = $"{online} 台在线 / 共 {devices.Count} 台 · {DateTime.Now:HH:mm:ss} 更新";

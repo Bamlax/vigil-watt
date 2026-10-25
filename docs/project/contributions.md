@@ -32,3 +32,4 @@
   **未纳入**任何设备协议适配、UI 改版、设置页改动与其它历史库功能；`CONTRIBUTORS.md` 的署名行已由
   同作者的 ATK / X9 那个 PR 提供，本 PR 不重复加。本机已复测：在装机的 1.2.1 本地构建上对照
   在线路径与库路径两类设备的时间显示，差值从 8 小时变为 0。
+- **imx1n**（[PR #54](https://github.com/evren-oct/vigil-watt/pull/54)）：纳入雷蛇毒蝰 V4 Pro（`1532:00E6` 接收器 / `1532:00E5` 本体）与索尼 INZONE H9 II（`054C:0FA8`，接收器模式）两个插件（`RazerCodec` / `RazerPlugin`、`InzoneCodec` / `InzoneH9Plugin`，21 条 codec 用例）。两者都是「发查询帧才出读数」，按 R1 默认关，走 `SupportsDiscoveryProbe` + `ProbeCooldown = 8s`；开关键 `Razer` / `SonyInzone` 已登记进 `AppSettings.PluginEnabled` 默认表（缺这行会被当成脏键删掉）。**核心改动**：`HidDeviceHandle` 新增 `SendOutputReport`（包 `HidD_SetOutputReport`）——索尼只认控制传输 SET_REPORT，写中断 OUT 端点时设备原样回显，会把回显误读成真实读数。**作者真机验证**：雷蛇 100%、索尼 78→94%（充电中），与应用日志、官方客户端读数交叉一致；关掉 INZONE Hub 后索尼仍可读。**未定项**：雷蛇有线模式下 `0x84` 充电查询无有效应答，充电状态保持 `Unknown`。

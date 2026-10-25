@@ -37,7 +37,7 @@ Taskbar battery pill:
 - Stores battery history with 24-hour, 7-day, and 30-day statistics; records can be managed by device.
 - Can launch at startup.
 
-**Device plugin switches:** MCHOSE and Logitech plugins are off by default because reading requires sending query reports. Enable them by brand in Settings. Other strictly passive plugins do not write to devices.
+**Device plugin switches:** MCHOSE, Logitech, Razer and Sony INZONE plugins are off by default because reading requires sending query reports. Enable them by brand in Settings. Other strictly passive plugins do not write to devices.
 
 ## Download and quick start
 
@@ -65,6 +65,8 @@ The table distinguishes devices verified on hardware from protocols implemented 
 | MCHOSE G3 V2 · Gmouse active query (`3837:4245`) | Contributor-verified on real hardware; shares the MCHOSE plugin switch |
 | Betop T9 · passive vendor-interface stream | Verified on hardware |
 | Logitech Bolt receiver (C548 + MX Master 3S) · HID++ | Verified on hardware |
+| Razer Viper V4 Pro (receiver) · classic 90-byte feature protocol | Verified on the developer's device; off by default, writes reports |
+| Sony INZONE H9 II (receiver) · `0xFF04` control-transfer query | Verified on the developer's device; off by default, writes reports |
 | Rapoo VT3 Gen 2 · passive `status-report7` | Verified on the developer's device |
 | Inphic ZHEN · passive report `0x03` | Verified on hardware |
 | HECATE G5M Pro · passive report `0x04` | Implemented; verified by the contributor, not retested here |

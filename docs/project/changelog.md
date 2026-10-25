@@ -35,6 +35,9 @@
 - **修迈从键盘型号识别（偏移差一位）**：`ModelFromSessionAck` 从 ACK 的 `[6]` 取密码，而真机帧是 `13 05 01 00 0A 03 00 00 00 02 1C 01`，密码在 `[5]`（`03 00 00 00 02 1C` = G87）。取错位置导致**整张 18 项型号表对所有键盘都匹配不到**，显示名一直退回产品名「MCHOSE 2.4G Wireless」。现在两种偏移都试（兼容当初那段多一字节的合成样本），真机复测显示名变「迈从 G87」。
 - **设备列表改增量更新**：每次刷新都整体替换 `ItemsSource`，ListView 会丢弃所有行容器重建，每分钟轮询都闪一下（图标换成 `UIElement` 后更明显）。改为构造时设一次 `ObservableCollection`，之后按 Id 对位同步——内容指纹（不含 Icon）相同就整行复用，连图标元素都不重建，只替换真正变化的行。
 - **历史库时间戳按本地时区读回**：库里存的是 UTC 毫秒，`DateTimeOffset.FromUnixTimeMilliseconds` 给的偏移是 `+00:00`，设备列表的「更新于」直接格式化它就显示成 UTC（本地时间少 8 小时）。在线设备走 `DateTimeOffset.Now` 所以正常，离线设备走库才暴露。`HistoryStore` 加 `LocalTime()` 统一转本地时区，六个读路径全走它；单测 `H14` 盯住「直接格式化不会显示成 UTC」。见 `dev/runtime-pitfalls.md` §21。
+## 2026-10-23
+
+- **新增 HECATE Wireless Receiver（`35BB:D3FB`）插件 `HecateWireless`**：接收器带与派世同族的 17 字节 `0xFF02` 通道，本机 STATUS/POWER 实测 50% / 3848 mV，复用 `PulsarCodec`。要写两条只读查询，所以与被动的 `Hecate` 插件分开、默认关。鼠标型号协议里没找到，由用户告知为 G3M Pro 升级版，设备名据此写死；充电位未验证。见 `hardware/hecate.md` §2。
 
 ## 2026-10-21
 

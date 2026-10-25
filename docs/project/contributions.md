@@ -21,7 +21,9 @@
 
 ## 2026-10-23
 
+- **k1ky0**（[#43](https://github.com/evren-oct/vigil-watt/pull/43)）：纳入寸渊影弑耳机与官方驱动的抢占用修复——新增 `OfficialAppGuard`（5 秒缓存的进程探测），官方 `DARKRIM.exe` 在跑时插件在 `IsCandidate` / `ProbeWrites` / `PollDevice` 三处同时让位（不认领 = 不打开句柄，这才是真让位），官方退出后下一轮自动恢复；并补 GameSir 解析失败诊断（失败日志记 report ID 分布，用来区分"接到别的集合"与"帧布局变了"）。**行为变更**：盖世小鸡按"主动通信默认关闭"改为默认关，`DisplayNameEn` 统一成 `GAMESIR`。**未纳入**：PR 自带的发版元数据（`<Version>` 1.2.4 与 `release-notes.md` 的 1.2.4 段）已回退到 1.2.3——那段只写了本 PR 的两台设备，缺 #54/#49/#50，发版时统一写。本机复测：构建 0 警告 0 错误，`DarkrimOfficialGuardTests` 4 项 + `GameSirCodecTests` 20 项全过；**本机无这两台设备，未做设备级验证**。
 - **Mutsuki233**（[#45](https://github.com/evren-oct/vigil-watt/pull/45)）：纳入罗技 PRO X 2 LIGHTSPEED 耳机（`046D:0AF7`）的 Centurion 只读电量通道、经典蓝牙显示名归一、失败容错与 2.4G 查询帧解析 / 名称两条单测。认领硬绑 `046D:0AF7` + `0xFFA0:0x0001` + 输入输出各 ≥64 字节，沿用「罗技」插件开关；Centurion 连续 4 次无应答才熔断转离线（比基类默认多容忍 1 次，拔线瞬间的短时超时不该造成离线闪烁）。**未纳入** HID++ 路径的改动与 USB 有线模式认领——后者耳机支持有线，但本次未验证。真机由贡献者本人验证：2.4G 放电 / 充电 / 拔线恢复 / 休眠唤醒，蓝牙电量与 Windows 设置一致，关闭罗技开关后插件卸载且不再查询（未做 USB 总线级抓包）。测试项目编译通过；单测在贡献者环境里因测试宿主起不来未能运行。**收口改动（维护者）**：本机复跑全量单测 **662 通过 / 1 跳过（CR-83）/ 0 失败**，用例本身没问题；`WritesEnabled` 的注释仍写「闸门是唯一写点内的 `HidppIO.WritesAllowed`」，与 Centurion 新增的第二个写点不符，已改写为两个写点同一道闸门；补回被误删的 `IsHidppInterface` 摘要并整理空行；`review-standard.md` 的 R2 例外条款按「混合型插件」重写；`logitech.md` 补 `## 1.` 标题（原文只有 §2，编号从 2 开始）；handoff §4 的 `#24` 改为 `#45`（#24 是设备适配指南 issue）；CR-91~93 记入 BACKLOG。
+- **Delitriuz**（[#49](https://github.com/evren-oct/vigil-watt/pull/49)）：纳入 HECATE G3M Pro 升级版（接收器 `35BB:D3FB`）插件 `HecateWireless`——17 字节 `0xFF02` 通道，STATUS `08 03` 判在线、POWER `08 04` 读电量，帧与派世同族故复用 `PulsarCodec`；要写两条只读查询，所以与被动的 `Hecate` 分开、默认关、走 `SupportsDiscoveryProbe` 节拍。附 `HecateWirelessFrameTests` 3 项，`safety.md` §3.1 登记写入闸门。文档侧给出 Kysona 内核驱动出处与「10 分钟被动监听零报文」的结论（`hecate.md` §2），据此判定这颗接收器没有被动通道、只能主动查。**未纳入**：`protocols.md` 的索引行（该文件只留索引，按项目规则不再往里加行）；鼠标型号协议里没找到型号串，显示名由用户告知后写死。**未验证**：充电位（作者未采到）。本机复测：构建 0 警告 0 错误，3 项帧解析用例全过；**本机无该接收器，未做设备级验证**。
 
 ## 2026-10-24
 
@@ -29,7 +31,7 @@
 - **Gpan666**（[#50](https://github.com/evren-oct/vigil-watt/pull/50)）：只纳入历史库时间戳的时区修正——`HistoryStore` 读库时把 UTC 毫秒转成本地时区
   （新增 `LocalTime()`，六个读路径统一走它），修掉离线设备「更新于」显示成 UTC、比本地时间少 8 小时的问题，
   附单测 `H14`（断言读回的偏移是本地时区，且直接格式化不会显示成 UTC）。
-  **未纳入**任何设备协议适配、UI 改版、设置页改动与其它历史库功能；`CONTRIBUTORS.md` 的署名行已由
-  同作者的 ATK / X9 那个 PR 提供，本 PR 不重复加。本机已复测：在装机的 1.2.1 本地构建上对照
+  **未纳入**任何设备协议适配、UI 改版、设置页改动与其它历史库功能；`CONTRIBUTORS.md` 已单独记一行
+  （原写「署名由同作者的 ATK / X9 PR 提供」不成立，#28 未合入）。本机已复测：在装机的 1.2.1 本地构建上对照
   在线路径与库路径两类设备的时间显示，差值从 8 小时变为 0。
 - **imx1n**（[PR #54](https://github.com/evren-oct/vigil-watt/pull/54)）：纳入雷蛇毒蝰 V4 Pro（`1532:00E6` 接收器 / `1532:00E5` 本体）与索尼 INZONE H9 II（`054C:0FA8`，接收器模式）两个插件（`RazerCodec` / `RazerPlugin`、`InzoneCodec` / `InzoneH9Plugin`，21 条 codec 用例）。两者都是「发查询帧才出读数」，按 R1 默认关，走 `SupportsDiscoveryProbe` + `ProbeCooldown = 8s`；开关键 `Razer` / `SonyInzone` 已登记进 `AppSettings.PluginEnabled` 默认表（缺这行会被当成脏键删掉）。**核心改动**：`HidDeviceHandle` 新增 `SendOutputReport`（包 `HidD_SetOutputReport`）——索尼只认控制传输 SET_REPORT，写中断 OUT 端点时设备原样回显，会把回显误读成真实读数。**作者真机验证**：雷蛇 100%、索尼 78→94%（充电中），与应用日志、官方客户端读数交叉一致；关掉 INZONE Hub 后索尼仍可读。**未定项**：雷蛇有线模式下 `0x84` 充电查询无有效应答，充电状态保持 `Unknown`。

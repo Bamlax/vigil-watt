@@ -16,6 +16,9 @@ VigilWatt 的设备适配大多来自社区：有人提供抓包样本，有人�
 | **shengzhi233** | CHERRY PIXIU75（`046A:01E4`，64 字节块协议，块 `0x1A` 取电量 + 充电位）与派世 Pulsar X2 V2（`3554:F508`，17 字节 STATUS/POWER）两个插件 | [PR #36](https://github.com/evren-oct/vigil-watt/pull/36) |
 | **Mutsuki233** | 罗技 PRO X 2 LIGHTSPEED 耳机（`046D:0AF7`）：提供设备信息与 2.4G / 蓝牙真机验证，Centurion 只读电量与蓝牙显示名适配 | [PR #45](https://github.com/evren-oct/vigil-watt/pull/45) |
 | **imx1n** | 雷蛇毒蝰 V4 Pro（`1532:00E6` 接收器 / `1532:00E5` 本体，经典 90 字节 feature 协议）与索尼 INZONE H9 II（`054C:0FA8`，`0xFF04` 控制传输查询）两个插件 | [PR #54](https://github.com/evren-oct/vigil-watt/pull/54) |
+| **k1ky0** | 寸渊影弑耳机与官方驱动抢占用修复（`OfficialAppGuard`：检测到 `DARKRIM.exe` 就不认领，官方退出后自动恢复），以及盖世小鸡解析失败诊断 | [PR #43](https://github.com/evren-oct/vigil-watt/pull/43) |
+| **Delitriuz** | HECATE G3M Pro 升级版（接收器 `35BB:D3FB`，17 字节 `0xFF02` 通道，STATUS `08 03` / POWER `08 04`）插件，并给出 Kysona 内核驱动出处与 10 分钟被动监听结论 | [PR #49](https://github.com/evren-oct/vigil-watt/pull/49) |
+| **Gpan666** | 历史库时间戳时区修正：`HistoryStore` 读库时把 UTC 毫秒转本地时区，离线设备「更新于」不再少 8 小时 | [PR #50](https://github.com/evren-oct/vigil-watt/pull/50) |
 
 ## 还能怎么帮
 

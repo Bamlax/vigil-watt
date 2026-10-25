@@ -26,3 +26,9 @@
 ## 2026-10-24
 
 - **dotisland**（[#14](https://github.com/evren-oct/vigil-watt/pull/14)）：只摘取两处——BLE 端点在 GATT 直读打开设备后补全缓存名（`BleBatteryWatcher.ReadBatteryViaGattAsync`，Watcher 的 Added 常带空名），设备列表电量列 `MinWidth=78` 右对齐（`99%` 与 `--` 宽度不同会让相邻行右端错位）。**未纳入** PR 核心的「按显示名双通道去重」：与本项目刚确认的决策冲突（多模连接厂家就按三个通道算，且托盘/贴片/小组件都只取在线设备，离线条目不占名额）；按 `Trim()` 后的名字分组，对 `迈从 2.4G Wireless` / `MCHOSE G87 5.0` 这种名字不同的设备无效；另有在 `Devices` getter 里改 `Kind` 的副作用与同型号误合并风险。也未采纳 `Protocol` 由 `BLE GATT` 改成「蓝牙」。本机复测：构建 0 警告 0 错误、相关单测 38 项通过。**收口改动（维护者）**：补名后补一次 `DeviceUpdated`（原 PR 补名后不通知 UI，界面不会立刻刷新）。
+- **Gpan666**（[#50](https://github.com/evren-oct/vigil-watt/pull/50)）：只纳入历史库时间戳的时区修正——`HistoryStore` 读库时把 UTC 毫秒转成本地时区
+  （新增 `LocalTime()`，六个读路径统一走它），修掉离线设备「更新于」显示成 UTC、比本地时间少 8 小时的问题，
+  附单测 `H14`（断言读回的偏移是本地时区，且直接格式化不会显示成 UTC）。
+  **未纳入**任何设备协议适配、UI 改版、设置页改动与其它历史库功能；`CONTRIBUTORS.md` 的署名行已由
+  同作者的 ATK / X9 那个 PR 提供，本 PR 不重复加。本机已复测：在装机的 1.2.1 本地构建上对照
+  在线路径与库路径两类设备的时间显示，差值从 8 小时变为 0。

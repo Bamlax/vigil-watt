@@ -64,6 +64,7 @@
 | CR-76 | 与 CR-75 同一修法落地。Inphic/Hecate/Delux 的读窗口 `continue` 有 deadline 兜住（不无限循环），未改 |
 | CR-77 | `MarkOffline` 注释改为"插件内软离线的唯一落地点"，并注明拔出走 `ReconcileRemovals`（不该盖 `LastUpdated`）。行为本来就对，是注释过满 |
 | CR-68 | 未采用 PR #14 的按显示名去重，改为按 MAC 判定自研实现：`Ble/DualChannelId` 归一 `btc:`/`ble:` 端点，`DeviceManager.AbsorbDualChannel` 收敛到经典那条。PR #14 的 `Devices` getter 副作用与 `NormalizeName` 大小写问题随之不适用 |
+| CR-86 | 历史库时间戳按本地时区读回（`HistoryStore.LocalTime`）：离线设备的「更新于」原先显示成 UTC，比本地时间少 8 小时。见 runtime-pitfalls.md §21 |
 
 ## wontfix
 

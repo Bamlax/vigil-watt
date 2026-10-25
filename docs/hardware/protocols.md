@@ -20,6 +20,7 @@
 | HECATE | G5M Pro | `35BB:D00B` | [hecate.md](hecate.md) | 贡献者真机 |
 | DELUX | M900 Pro | `1D57:FA65` | [delux.md](delux.md) | 贡献者真机 |
 | AULA | F99 Pro | `3554:FA09` | [aula.md](aula.md) | 贡献者真机 |
+| 凌豹 LINGBAO | K98 | `3554:FA09` | [lingbao.md](lingbao.md) | 本机验证 |
 | 索尼 | DualSense 蓝牙 | `054C:0CE6` | [dualsense.md](dualsense.md) | 贡献者真机 |
 | GANSS | GS3104T-Pro | `05AC:024F` | [ganss.md](ganss.md) | 贡献者真机 |
 | CHERRY | PIXIU75（2.4G / 有线） | `046A:01E4` / `01E2` | [cherry.md](cherry.md) | 贡献者真机 |
